@@ -188,14 +188,15 @@ char** genpointers(char* str, size_t numpoints, char stopc) {
 /*! Функция сортировки массива строк (Быстрая сортировка)
  * @param [in] array Массив нулл-терминированных строк
  * @param [in] size Размер массива
+ * @param [in] comp Компаратор
  */
-void quicksort(char** array, size_t size) {
+void quicksort(char** array, size_t size, int (*comp) (char*, char*)) {
 	if(size < 2) return;
 	
 	size_t l = 0, r = size - 1, p = (l + r) / 2;
 	while(l < r) {	
-		while(strcompare(array[l], array[p]) < 0 && l < p) l++;
-		while(strcompare(array[r], array[p]) >= 0 && p < r) r--;
+		while(comp(array[l], array[p]) < 0 && l < p) l++;
+		while(comp(array[r], array[p]) >= 0 && p < r) r--;
 		if(l == r) break;
 		
 		swap(&array[l], &array[r]);
@@ -204,20 +205,21 @@ void quicksort(char** array, size_t size) {
 		else if(r == p) p = l;
 	}
 	
-	quicksort(array, p);
-	quicksort(array + p + 1, size - p - 1);
+	quicksort(array, p, comp);
+	quicksort(array + p + 1, size - p - 1, comp);
 }
 
 /*! Функция сортировки массива строк (Быстрая сортировка)
  * @param [in] array Массив нулл-терминированных строк
  * @param [in] size Размер массива
+ * @param [in] comp Компаратор
  */
-void bubblesort(char** array, size_t size) {
+void bubblesort(char** array, size_t size, int (*comp) (char*, char*)) {
 	char found = 0;
 	for(size_t n = 0; n < size; n++) {
 		found = 0;
 		for(size_t i = 0; i < size - 1; i++)
-			if(strcompare(array[i], array[i + 1]) > 0) {
+			if(comp(array[i], array[i + 1]) > 0) {
 				swap(&array[i], &array[i + 1]);
 				found = 1;
 			}
@@ -244,6 +246,11 @@ void writefile(const char* filename, char** lines, size_t linenum) {
 	fclose(fp);
 }
 
+void clearinput() {
+	int c;
+	while ((c = getchar()) != '\n' && c != EOF) { }
+}
+
 int main(int argc, char* argv[]) {
 	if(argc != 3) {
 		printf("# LineSorter v2 by InversionSpaces\n");
@@ -254,11 +261,37 @@ int main(int argc, char* argv[]) {
 	
 	printf("# Reading file...\n");
 	char* file = readfile(argv[1]);
+	
 	printf("# Done\n# Processing...\n");
 	size_t linenum = replace(file, '\n', '\0');
 	char** lines = genpointers(file, linenum, '\0');
-	//quicksort(lines, linenum);
-	bubblesort(lines, linenum);
+	
+	printf("# Reverse or straight sorting? [r/s]\n");
+	
+	char choice;
+	scanf("%c", &choice);
+	clearinput();
+	choice = tolowerc(choice);
+	
+	int (*comp) (char*, char*);
+	if(choice == 's') comp = strcompare;
+	else if(choice == 'r') comp = strrevcompare;
+	else {
+		printf("# Error unknown choice. Aborting...\n");
+		return 1;
+	}
+	
+	printf("# Do you have too much time? [y/n]\n");
+	scanf("%c", &choice);
+	clearinput();
+	choice = tolowerc(choice);
+	if(choice == 'y') bubblesort(lines, linenum, comp);
+	else if(choice == 'n') quicksort(lines, linenum, comp);
+	else {
+		printf("# Error unknown choice. Aborting...\n");
+		return 1;
+	}
+	
 	printf("# Done\n# Writing file...\n");
 	writefile(argv[2], lines, linenum);
 	printf("# Done\n# Exiting...\n");
