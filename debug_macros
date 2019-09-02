@@ -1,0 +1,13 @@
+#define PRINTF if(DEBUG) printf
+
+#define DEBUG 1
+
+#ifndef DEBUG
+	#define DEBUG 0
+#endif
+
+#ifdef DEBUG
+	#define PRINTF(...) printf(__VA_ARGS__)
+#else
+	#define PRINTF(...) 
+#endif

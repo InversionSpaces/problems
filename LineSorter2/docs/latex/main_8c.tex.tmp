@@ -1,0 +1,126 @@
+\hypertarget{main_8c}{}\section{main.\+c File Reference}
+\label{main_8c}\index{main.\+c@{main.\+c}}
+{\ttfamily \#include $<$stdio.\+h$>$}\newline
+{\ttfamily \#include $<$stdlib.\+h$>$}\newline
+{\ttfamily \#include $<$string.\+h$>$}\newline
+{\ttfamily \#include $<$assert.\+h$>$}\newline
+Include dependency graph for main.\+c\+:
+% FIG 0
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{main_8c_a7594f858a31ec4a0d187140160f22064}{swap} (char $\ast$$\ast$str1, char $\ast$$\ast$str2)
+\item 
+char $\ast$ \hyperlink{main_8c_ab66027025bc0e5b41fc6f1960d2fe33a}{readfile} (const char $\ast$filename)
+\item 
+size\+\_\+t \hyperlink{main_8c_ac7ca9a8292da00d8f99df6e73f02b24b}{replace} (char $\ast$str, char from, char to)
+\item 
+char $\ast$$\ast$ \hyperlink{main_8c_a34d7f296c761a2e983844bd8ffc8d5a5}{genpointers} (char $\ast$str, size\+\_\+t numpoints, char stopc)
+\item 
+void \hyperlink{main_8c_aab3b6edb6bae701be120d38006d2d61b}{sort} (char $\ast$$\ast$array, size\+\_\+t size)
+\item 
+void \hyperlink{main_8c_ab5e0e32006e280cc229c436989a1c16d}{writefile} (const char $\ast$filename, char $\ast$$\ast$lines, size\+\_\+t linenum)
+\item 
+\mbox{\Hypertarget{main_8c_a0ddf1224851353fc92bfbff6f499fa97}\label{main_8c_a0ddf1224851353fc92bfbff6f499fa97}} 
+int {\bfseries main} (int argc, char $\ast$argv\mbox{[}$\,$\mbox{]})
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Line\+Sorter 
+
+\subsection{Function Documentation}
+\mbox{\Hypertarget{main_8c_a34d7f296c761a2e983844bd8ffc8d5a5}\label{main_8c_a34d7f296c761a2e983844bd8ffc8d5a5}} 
+\index{main.\+c@{main.\+c}!genpointers@{genpointers}}
+\index{genpointers@{genpointers}!main.\+c@{main.\+c}}
+\subsubsection{\texorpdfstring{genpointers()}{genpointers()}}
+{\footnotesize\ttfamily char$\ast$$\ast$ genpointers (\begin{DoxyParamCaption}\item[{char $\ast$}]{str,  }\item[{size\+\_\+t}]{numpoints,  }\item[{char}]{stopc }\end{DoxyParamCaption})}
+
+Функция создания массива указателей на оканчивающиеся на данный символ подстроки 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\tt in}  & {\em str} & Исходная строка \\
+\hline
+\mbox{\tt in}  & {\em numpoints} & Количество подстрок \\
+\hline
+\mbox{\tt in}  & {\em stopc} & Символ окончания подстроки \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Массив указателей на построки
+\end{DoxyReturn}
+\begin{DoxyNote}{Note}
+UB, если количество stopc в str меньше, чем numpoints 
+\end{DoxyNote}
+\mbox{\Hypertarget{main_8c_ab66027025bc0e5b41fc6f1960d2fe33a}\label{main_8c_ab66027025bc0e5b41fc6f1960d2fe33a}} 
+\index{main.\+c@{main.\+c}!readfile@{readfile}}
+\index{readfile@{readfile}!main.\+c@{main.\+c}}
+\subsubsection{\texorpdfstring{readfile()}{readfile()}}
+{\footnotesize\ttfamily char$\ast$ readfile (\begin{DoxyParamCaption}\item[{const char $\ast$}]{filename }\end{DoxyParamCaption})}
+
+Функция чтения файла в строку 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\tt in}  & {\em filename} & Путь к файлу \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Нулл-\/терминированная строка с содержанием файла 
+\end{DoxyReturn}
+\mbox{\Hypertarget{main_8c_ac7ca9a8292da00d8f99df6e73f02b24b}\label{main_8c_ac7ca9a8292da00d8f99df6e73f02b24b}} 
+\index{main.\+c@{main.\+c}!replace@{replace}}
+\index{replace@{replace}!main.\+c@{main.\+c}}
+\subsubsection{\texorpdfstring{replace()}{replace()}}
+{\footnotesize\ttfamily size\+\_\+t replace (\begin{DoxyParamCaption}\item[{char $\ast$}]{str,  }\item[{char}]{from,  }\item[{char}]{to }\end{DoxyParamCaption})}
+
+Функция замены символа в строке 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\tt in}  & {\em str} & Строка \\
+\hline
+\mbox{\tt in}  & {\em from} & Заменяемый символ \\
+\hline
+\mbox{\tt in}  & {\em to} & Заменяющий символ \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Количество заменённых символов 
+\end{DoxyReturn}
+\mbox{\Hypertarget{main_8c_aab3b6edb6bae701be120d38006d2d61b}\label{main_8c_aab3b6edb6bae701be120d38006d2d61b}} 
+\index{main.\+c@{main.\+c}!sort@{sort}}
+\index{sort@{sort}!main.\+c@{main.\+c}}
+\subsubsection{\texorpdfstring{sort()}{sort()}}
+{\footnotesize\ttfamily void sort (\begin{DoxyParamCaption}\item[{char $\ast$$\ast$}]{array,  }\item[{size\+\_\+t}]{size }\end{DoxyParamCaption})}
+
+Функция сортировки массива строк 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\tt in}  & {\em array} & Массив нулл-\/терминированных строк \\
+\hline
+\mbox{\tt in}  & {\em size} & Размер массива \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{main_8c_a7594f858a31ec4a0d187140160f22064}\label{main_8c_a7594f858a31ec4a0d187140160f22064}} 
+\index{main.\+c@{main.\+c}!swap@{swap}}
+\index{swap@{swap}!main.\+c@{main.\+c}}
+\subsubsection{\texorpdfstring{swap()}{swap()}}
+{\footnotesize\ttfamily void swap (\begin{DoxyParamCaption}\item[{char $\ast$$\ast$}]{str1,  }\item[{char $\ast$$\ast$}]{str2 }\end{DoxyParamCaption})}
+
+Функция обмена значениями указателей на строки 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\tt in}  & {\em str1} & Указатель для обмена \\
+\hline
+\mbox{\tt in}  & {\em str2} & Указатель для обмена \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{main_8c_ab5e0e32006e280cc229c436989a1c16d}\label{main_8c_ab5e0e32006e280cc229c436989a1c16d}} 
+\index{main.\+c@{main.\+c}!writefile@{writefile}}
+\index{writefile@{writefile}!main.\+c@{main.\+c}}
+\subsubsection{\texorpdfstring{writefile()}{writefile()}}
+{\footnotesize\ttfamily void writefile (\begin{DoxyParamCaption}\item[{const char $\ast$}]{filename,  }\item[{char $\ast$$\ast$}]{lines,  }\item[{size\+\_\+t}]{linenum }\end{DoxyParamCaption})}
+
+Функция записи массива строк в файл 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\tt in}  & {\em filename} & Путь к файлу \\
+\hline
+\mbox{\tt in}  & {\em lines} & Массив строк \\
+\hline
+\mbox{\tt in}  & {\em linenum} & Размер массива строк \\
+\hline
+\end{DoxyParams}
