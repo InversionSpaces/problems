@@ -195,7 +195,7 @@ char* readfile(const char* filename) {
 size_t replace(char* str, char from, char to) {
 	assert(str != NULL);
 	size_t count = 0;
-	for(size_t i = 0; str[i]; i++) {
+	for(size_t i = 0; str[i]; ++i) {
 		if(str[i] == from) {
 			str[i] = to;
 			count++;
@@ -223,7 +223,7 @@ char** genpointers(char* str, size_t numpoints, char stopc) {
 	}
 	
 	size_t pos = 0;
-	for(size_t i = 0; i < numpoints; i++) {
+	for(size_t i = 0; i < numpoints; ++i) {
 		retval[i] = str + pos;
 		while(str[pos] != stopc) pos++;
 		pos++;
@@ -265,9 +265,9 @@ void quicksort(char** array, size_t size, int (*comp) (char*, char*)) {
 void bubblesort(char** array, size_t size, int (*comp) (char*, char*)) {
 	assert(array != NULL);
 	char found = 0;
-	for(size_t n = 0; n < size; n++) {
+	for(size_t n = 0; n < size; ++n) {
 		found = 0;
-		for(size_t i = 0; i < size - 1; i++)
+		for(size_t i = 0; i < size - 1; ++i)
 			if(comp(array[i], array[i + 1]) > 0) {
 				swap(&array[i], &array[i + 1]);
 				found = 1;
