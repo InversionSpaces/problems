@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <sys/stat.h>
 
 
 /*! Функция измерения длины нулл-терминированной строки с учётом нулл-символа
@@ -151,9 +152,19 @@ char* readfile(const char* filename) {
 		exit(1);
 	}
 	
+#ifdef __unix__
+	struct stat st;
+	int err = fstat(fileno(fp), &st);
+	if(err != 0) {
+		printf("# ERROR: Failed to get file stats. Exiting...\n");
+		exit(1);
+	}
+	size_t size = st.st_size;
+#else
 	fseek(fp, 0L, SEEK_END);
 	size_t size = ftell(fp);
 	fseek(fp, 0L, SEEK_SET);
+#endif
 	
 	char* retval = (char*)malloc(size + 1);
 	
@@ -162,7 +173,12 @@ char* readfile(const char* filename) {
 		exit(2);
 	}
 	
-	fread(retval, 1, size, fp);
+	size_t readed = fread(retval, 1, size, fp);
+	if(readed != size) {
+		printf("# ERROR: Failed to read file. Exiting...\n");
+		fclose(fp);
+		exit(2);
+	}
 	retval[size] = 0;
 	
 	fclose(fp);
