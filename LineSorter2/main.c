@@ -110,9 +110,10 @@ int strrevcompare(char* str1, char* str2) {
 	if(j == -1) return 1;
 }
 
-/// Функция обмена значениями указателей на строки
-/// @param [in] str1 Указатель для обмена
-/// @param [in] str2 Указатель для обмена
+/*! Функция обмена значениями указателей на строки
+ * @param [in] str1 Указатель для обмена
+ * @param [in] str2 Указатель для обмена
+ */
 void swap(char **str1, char **str2) {
 	assert(str1 != NULL);
 	//assert(*str1 != NULL); // Нужно ли?
