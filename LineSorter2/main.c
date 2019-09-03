@@ -79,6 +79,9 @@ int strcompare(char* str1, char* str2) {
 	if(!str1[i] && !str2[j]) return 0;
 	if(!str1[i]) return -1;
 	if(!str2[j]) return 1;
+	
+	assert(0); ///< Недостижимый код
+	return 0;
 }
 
 /*! Функция сравнения инверсий двух строк в лексиграфическом порядке с 
@@ -113,6 +116,9 @@ int strrevcompare(char* str1, char* str2) {
 	if(i == -1 && j == -1) return 0;
 	if(i == -1) return -1;
 	if(j == -1) return 1;
+	
+	assert(0); ///< Недостижимый код
+	return 0;
 }
 
 /*! Функция обмена значениями указателей на строки
