@@ -7,13 +7,18 @@
 #include <string.h>
 #include <assert.h>
 
+
+/*! Функция измерения длины нулл-терминированной строки
+ * @param [in] str Нулл-турминированная строка
+ * @return Длина строки
+ */
 size_t len(char* str) {
 	size_t retval = 0;
 	while(str[retval++]);
 	return retval;
 }
 
-#define TOLOWER_OFFSET ('A' - 'a')
+#define TOLOWER_OFFSET ('A' - 'a') ///< Сдвиг между заглавными и строчными буквами
 
 /*! Функция проверки символа на то, является ли он буквой
  * @param [in] c Символ
@@ -110,9 +115,9 @@ int strrevcompare(char* str1, char* str2) {
 /// @param [in] str2 Указатель для обмена
 void swap(char **str1, char **str2) {
 	assert(str1 != NULL);
-	//assert(*str1 != NULL);
+	//assert(*str1 != NULL); // Нужно ли?
 	assert(str2 != NULL);
-	//assert(*str2 != NULL);
+	//assert(*str2 != NULL); // Нужно ли?
 	
 	if(str1 == str2) return;
 	
@@ -138,6 +143,12 @@ char* readfile(const char* filename) {
 	fseek(fp, 0L, SEEK_SET);
 	
 	char* retval = (char*)malloc(size + 1);
+	
+	if(retval == NULL) {
+		printf("# ERROR: Failed to allocate memory. Exiting...\n");
+		exit(2);
+	}
+	
 	fread(retval, 1, size, fp);
 	retval[size] = 0;
 	
@@ -174,6 +185,11 @@ size_t replace(char* str, char from, char to) {
  */
 char** genpointers(char* str, size_t numpoints, char stopc) {
 	char** retval = (char**)malloc(numpoints * sizeof(char*));
+	
+	if(retval == NULL) {
+		printf("# ERROR: Failed to allocate memory. Exiting...\n");
+		exit(2);
+	}
 	
 	size_t pos = 0;
 	for(size_t i = 0; i < numpoints; i++) {
@@ -246,6 +262,9 @@ void writefile(const char* filename, char** lines, size_t linenum) {
 	fclose(fp);
 }
 
+/*! Функция очистки буффера ввода
+ * @note Честно скопипащено с SO. fseek и fflush не заработали на моей машине
+ */
 void clearinput() {
 	int c;
 	while ((c = getchar()) != '\n' && c != EOF) { }
