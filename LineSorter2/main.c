@@ -291,7 +291,7 @@ void writefile(const char* filename, char** lines, size_t linenum) {
 		exit(1);
 	}
 
-	for(size_t i = 0; i < linenum; i++) {
+	for(size_t i = 0; i < linenum; ++i) {
 		assert(lines[i] != NULL);
 		fprintf(fp, "%s\n", lines[i]);
 	}
