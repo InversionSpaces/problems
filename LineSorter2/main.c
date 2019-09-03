@@ -13,6 +13,7 @@
  * @return Длина строки
  */
 size_t len(char* str) {
+	assert(str != NULL);
 	size_t retval = 0;
 	while(str[retval++]);
 	return retval;
@@ -54,6 +55,8 @@ char tolowerc(const char c) {
  * -1 если первая меньше второй
  */
 int strcompare(char* str1, char* str2) {
+	assert(str1 != NULL);
+	assert(str2 != NULL);
 	size_t i = 0, j = 0;
 	
 	while(str1[i] && str2[j]) {
@@ -86,6 +89,8 @@ int strcompare(char* str1, char* str2) {
  * 0 если они равны и -1 если инверсия первой меньше инверсии второй
  */
 int strrevcompare(char* str1, char* str2) {
+	assert(str1 != NULL);
+	assert(str2 != NULL);
 	ssize_t i = len(str1) - 1, j = len(str2) - 1;
 	
 	while(i >= 0 && j >= 0) {
@@ -116,9 +121,9 @@ int strrevcompare(char* str1, char* str2) {
  */
 void swap(char **str1, char **str2) {
 	assert(str1 != NULL);
-	//assert(*str1 != NULL); // Нужно ли?
+	assert(*str1 != NULL); // Нужно ли?
 	assert(str2 != NULL);
-	//assert(*str2 != NULL); // Нужно ли?
+	assert(*str2 != NULL); // Нужно ли?
 	
 	if(str1 == str2) return;
 	
@@ -132,6 +137,7 @@ void swap(char **str1, char **str2) {
  * @return Нулл-терминированная строка с содержанием файла
  */
 char* readfile(const char* filename) {
+	assert(filename != NULL);
 	FILE* fp = fopen(filename, "rb");
 	
 	if(fp == NULL) {
@@ -165,6 +171,7 @@ char* readfile(const char* filename) {
  * @return Количество заменённых символов
  */
 size_t replace(char* str, char from, char to) {
+	assert(str != NULL);
 	size_t count = 0;
 	for(size_t i = 0; str[i]; i++) {
 		if(str[i] == from) {
@@ -185,6 +192,7 @@ size_t replace(char* str, char from, char to) {
  * @note UB, если количество stopc в str меньше, чем numpoints
  */
 char** genpointers(char* str, size_t numpoints, char stopc) {
+	assert(str != NULL);
 	char** retval = (char**)malloc(numpoints * sizeof(char*));
 	
 	if(retval == NULL) {
@@ -208,6 +216,7 @@ char** genpointers(char* str, size_t numpoints, char stopc) {
  * @param [in] comp Компаратор
  */
 void quicksort(char** array, size_t size, int (*comp) (char*, char*)) {
+	assert(array != NULL);
 	if(size < 2) return;
 	
 	size_t l = 0, r = size - 1, p = (l + r) / 2;
@@ -232,6 +241,7 @@ void quicksort(char** array, size_t size, int (*comp) (char*, char*)) {
  * @param [in] comp Компаратор
  */
 void bubblesort(char** array, size_t size, int (*comp) (char*, char*)) {
+	assert(array != NULL);
 	char found = 0;
 	for(size_t n = 0; n < size; n++) {
 		found = 0;
@@ -250,6 +260,8 @@ void bubblesort(char** array, size_t size, int (*comp) (char*, char*)) {
  * @param [in] linenum Размер массива строк
  */
 void writefile(const char* filename, char** lines, size_t linenum) {
+	assert(filename != NULL);
+	assert(lines != NULL);
 	FILE* fp = fopen(filename, "wb");
 	
 	if(fp == NULL) {
@@ -257,8 +269,10 @@ void writefile(const char* filename, char** lines, size_t linenum) {
 		exit(1);
 	}
 	
-	for(size_t i = 0; i < linenum; i++)
+	for(size_t i = 0; i < linenum; i++) {
+		assert(lines[i] != NULL);
 		fprintf(fp, "%s\n", lines[i]);
+	}
 		
 	fclose(fp);
 }
