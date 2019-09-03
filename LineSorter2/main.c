@@ -45,10 +45,10 @@ int iscapitalc(const char c) {
  */
 char tolowerc(const char c) {
 	if(iscapitalc(c)) return (c - TOLOWER_OFFSET);
-	return c; 
+	return c;
 }
 
-/*! Функция сравнения двух строк в лексиграфическом порядке с учётом 
+/*! Функция сравнения двух строк в лексиграфическом порядке с учётом
  * только букв строк, приведённых в нижний регистр
  * @param [in] str1 Первая строка
  * @param [in] str2 Вторая строка
@@ -59,33 +59,33 @@ int strcompare(char* str1, char* str2) {
 	assert(str1 != NULL);
 	assert(str2 != NULL);
 	size_t i = 0, j = 0;
-	
+
 	while(str1[i] && str2[j]) {
 		while(str1[i] && !isalphac(str1[i])) i++;
 		while(str2[j] && !isalphac(str2[j])) j++;
-		
+
 		if(!str1[i] && !str2[j]) return 0;
 		if(!str1[i]) return -1;
 		if(!str2[j]) return 1;
-		
+
 		char lc1 = tolowerc(str1[i]);
 		char lc2 = tolowerc(str2[j]);
-		
+
 		if(lc1 < lc2) return -1;
 		if(lc1 > lc2) return 1;
-		
+
 		i++; j++;
 	}
-	
+
 	if(!str1[i] && !str2[j]) return 0;
 	if(!str1[i]) return -1;
 	if(!str2[j]) return 1;
-	
+
 	assert(0); ///< Недостижимый код
 	return 0;
 }
 
-/*! Функция сравнения инверсий двух строк в лексиграфическом порядке с 
+/*! Функция сравнения инверсий двух строк в лексиграфическом порядке с
  * учётом только букв строк, приведённых в нижний регистр
  * @param [in] str1 Первая строка
  * @param [in] str2 Вторая строка
@@ -96,28 +96,28 @@ int strrevcompare(char* str1, char* str2) {
 	assert(str1 != NULL);
 	assert(str2 != NULL);
 	ssize_t i = len(str1) - 1, j = len(str2) - 1;
-	
+
 	while(i >= 0 && j >= 0) {
 		while(i >= 0 && !isalphac(str1[i])) i--;
 		while(j >= 0 && !isalphac(str2[j])) j--;
-		
+
 		if(i == -1 && j == -1) return 0;
 		if(i == -1) return -1;
 		if(j == -1) return 1;
-		
+
 		char lc1 = tolowerc(str1[i]);
 		char lc2 = tolowerc(str2[j]);
-		
+
 		if(lc1 < lc2) return -1;
 		if(lc1 > lc2) return 1;
-		
+
 		i--; j--;
 	}
-	
+
 	if(i == -1 && j == -1) return 0;
 	if(i == -1) return -1;
 	if(j == -1) return 1;
-	
+
 	assert(0); ///< Недостижимый код
 	return 0;
 }
@@ -131,9 +131,9 @@ void swap(char **str1, char **str2) {
 	assert(*str1 != NULL); // Нужно ли?
 	assert(str2 != NULL);
 	assert(*str2 != NULL); // Нужно ли?
-	
+
 	if(str1 == str2) return;
-	
+
 	char *tmp = *str1;
 	*str1 = *str2;
 	*str2 = tmp;
@@ -146,7 +146,7 @@ void swap(char **str1, char **str2) {
 char* readfile(const char* filename) {
 	assert(filename != NULL);
 	FILE* fp = fopen(filename, "rb");
-	
+
 	if(fp == NULL) {
 		printf("# ERROR: Failed to open file: %s. Exiting...\n", filename);
 		exit(1);
@@ -165,9 +165,9 @@ char* readfile(const char* filename) {
 	size_t size = ftell(fp);
 	fseek(fp, 0L, SEEK_SET);
 #endif
-	
+
 	char* retval = (char*)malloc(size + 1);
-	
+
 	if(retval == NULL) {
 		printf("# ERROR: Failed to allocate memory. Exiting...\n");
 		exit(2);
@@ -180,9 +180,9 @@ char* readfile(const char* filename) {
 		exit(2);
 	}
 	retval[size] = 0;
-	
+
 	fclose(fp);
-	
+
 	return retval;
 }
 
@@ -204,31 +204,31 @@ size_t replace(char* str, char from, char to) {
 	return count;
 }
 
-/*! Функция создания массива указателей на оканчивающиеся 
+/*! Функция создания массива указателей на оканчивающиеся
  * на данный символ подстроки
  * @param [in] str Исходная строка
  * @param [in] numpoints Количество подстрок
  * @param [in] stopc Символ окончания подстроки
  * @return Массив указателей на построки
- * 
+ *
  * @note UB, если количество stopc в str меньше, чем numpoints
  */
 char** genpointers(char* str, size_t numpoints, char stopc) {
 	assert(str != NULL);
 	char** retval = (char**)malloc(numpoints * sizeof(char*));
-	
+
 	if(retval == NULL) {
 		printf("# ERROR: Failed to allocate memory. Exiting...\n");
 		exit(2);
 	}
-	
+
 	size_t pos = 0;
 	for(size_t i = 0; i < numpoints; ++i) {
 		retval[i] = str + pos;
 		while(str[pos] != stopc) pos++;
 		pos++;
 	}
-	
+
 	return retval;
 }
 
@@ -240,19 +240,19 @@ char** genpointers(char* str, size_t numpoints, char stopc) {
 void quicksort(char** array, size_t size, int (*comp) (char*, char*)) {
 	assert(array != NULL);
 	if(size < 2) return;
-	
+
 	size_t l = 0, r = size - 1, p = (l + r) / 2;
-	while(l < r) {	
+	while(l < r) {
 		while(comp(array[l], array[p]) < 0 && l < p) l++;
 		while(comp(array[r], array[p]) >= 0 && p < r) r--;
 		if(l == r) break;
-		
+
 		swap(&array[l], &array[r]);
-		
+
 		if(l == p) p = r;
 		else if(r == p) p = l;
 	}
-	
+
 	quicksort(array, p, comp);
 	quicksort(array + p + 1, size - p - 1, comp);
 }
@@ -285,17 +285,17 @@ void writefile(const char* filename, char** lines, size_t linenum) {
 	assert(filename != NULL);
 	assert(lines != NULL);
 	FILE* fp = fopen(filename, "wb");
-	
+
 	if(fp == NULL) {
 		printf("# ERROR: Failed to open file: %s. Exiting...\n", filename);
 		exit(1);
 	}
-	
+
 	for(size_t i = 0; i < linenum; i++) {
 		assert(lines[i] != NULL);
 		fprintf(fp, "%s\n", lines[i]);
 	}
-		
+
 	fclose(fp);
 }
 
@@ -314,21 +314,21 @@ int main(int argc, char* argv[]) {
 		printf("# Usage: %s INPUT OUTPUT\n", argv[0]);
 		return 1;
 	}
-	
+
 	printf("# Reading file...\n");
 	char* file = readfile(argv[1]);
-	
+
 	printf("# Done\n# Processing...\n");
 	size_t linenum = replace(file, '\n', '\0');
 	char** lines = genpointers(file, linenum, '\0');
-	
+
 	printf("# Reverse or straight sorting? [r/s]\n");
-	
+
 	char choice;
 	scanf("%c", &choice);
 	clearinput();
 	choice = tolowerc(choice);
-	
+
 	int (*comp) (char*, char*);
 	if(choice == 's') comp = strcompare;
 	else if(choice == 'r') comp = strrevcompare;
@@ -336,7 +336,7 @@ int main(int argc, char* argv[]) {
 		printf("# Error unknown choice. Aborting...\n");
 		return 1;
 	}
-	
+
 	printf("# Do you have too much time? [y/n]\n");
 	scanf("%c", &choice);
 	clearinput();
@@ -347,11 +347,11 @@ int main(int argc, char* argv[]) {
 		printf("# Error unknown choice. Aborting...\n");
 		return 1;
 	}
-	
+
 	printf("# Done\n# Writing file...\n");
 	writefile(argv[2], lines, linenum);
 	printf("# Done\n# Exiting...\n");
-	
+
 	free(file);
 	free(lines);
 }
