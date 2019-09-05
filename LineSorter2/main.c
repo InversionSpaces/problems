@@ -13,11 +13,11 @@
  * @param [in] str Нулл-турминированная строка
  * @return Длина строки
  */
-size_t len(char* str) {
+size_t len(const char* str) {
 	assert(str != NULL);
-	size_t retval = 0;
-	while(str[retval++]);
-	return retval;
+	char* tmp = (char*)str;
+	while(*tmp) ++tmp;
+	return (size_t)(tmp - str);
 }
 
 #define TOLOWER_OFFSET ('A' - 'a') ///< Сдвиг между заглавными и строчными буквами
@@ -55,7 +55,7 @@ char tolowerc(const char c) {
  * @return 1 если первая строка больше второй, 0 если они равны и \
  * -1 если первая меньше второй
  */
-int strcompare(char* str1, char* str2) {
+int strcompare(const char* str1, const char* str2) {
 	assert(str1 != NULL);
 	assert(str2 != NULL);
 	size_t i = 0, j = 0;
@@ -92,7 +92,7 @@ int strcompare(char* str1, char* str2) {
  * @return 1 если инверсия первой строки больше инверсии второй, \
  * 0 если они равны и -1 если инверсия первой меньше инверсии второй
  */
-int strrevcompare(char* str1, char* str2) {
+int strrevcompare(const char* str1, const char* str2) {
 	assert(str1 != NULL);
 	assert(str2 != NULL);
 	ssize_t i = len(str1) - 1, j = len(str2) - 1;
@@ -128,9 +128,9 @@ int strrevcompare(char* str1, char* str2) {
  */
 void swap(char **str1, char **str2) {
 	assert(str1 != NULL);
-	assert(*str1 != NULL); // Нужно ли?
+	assert(*str1 != NULL);
 	assert(str2 != NULL);
-	assert(*str2 != NULL); // Нужно ли?
+	assert(*str2 != NULL);
 
 	if(str1 == str2) return;
 
@@ -213,7 +213,7 @@ size_t replace(char* str, char from, char to) {
  *
  * @note UB, если количество stopc в str меньше, чем numpoints
  */
-char** genpointers(char* str, size_t numpoints, char stopc) {
+char** genpointers(const char* str, size_t numpoints, char stopc) {
 	assert(str != NULL);
 	char** retval = (char**)malloc(numpoints * sizeof(char*));
 
@@ -224,7 +224,7 @@ char** genpointers(char* str, size_t numpoints, char stopc) {
 
 	size_t pos = 0;
 	for(size_t i = 0; i < numpoints; ++i) {
-		retval[i] = str + pos;
+		retval[i] = (char*)str + pos;
 		while(str[pos] != stopc) pos++;
 		pos++;
 	}
@@ -237,7 +237,7 @@ char** genpointers(char* str, size_t numpoints, char stopc) {
  * @param [in] size Размер массива
  * @param [in] comp Компаратор
  */
-void quicksort(char** array, size_t size, int (*comp) (char*, char*)) {
+void quicksort(char** array, size_t size, int (*comp) (const char*, const char*)) {
 	assert(array != NULL);
 	if(size < 2) return;
 
@@ -262,7 +262,7 @@ void quicksort(char** array, size_t size, int (*comp) (char*, char*)) {
  * @param [in] size Размер массива
  * @param [in] comp Компаратор
  */
-void bubblesort(char** array, size_t size, int (*comp) (char*, char*)) {
+void bubblesort(char** array, size_t size, int (*comp) (const char*, const char*)) {
 	assert(array != NULL);
 	char found = 0;
 	for(size_t n = 0; n < size; ++n) {
@@ -329,7 +329,7 @@ int main(int argc, char* argv[]) {
 	clearinput();
 	choice = tolowerc(choice);
 
-	int (*comp) (char*, char*);
+	int (*comp) (const char*, const char*);
 	if(choice == 's') comp = strcompare;
 	else if(choice == 'r') comp = strrevcompare;
 	else {
