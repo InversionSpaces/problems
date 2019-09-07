@@ -278,6 +278,29 @@ char **genpointers(const char *str, size_t numpoints, char stopc)
  * @param [in] size Размер массива
  * @param [in] comp Компаратор
  */
+void bubblesort(char **array, size_t size,
+		int (*comp)(const char *, const char *))
+{
+	assert(array != NULL);
+
+	char found = 0;
+	for (size_t n = 0; n < size; ++n) {
+		found = 0;
+		for (size_t i = 0; i < size - 1; ++i)
+			if (comp(array[i], array[i + 1]) > 0) {
+				swap(&array[i], &array[i + 1]);
+				found = 1;
+			}
+		if (!found)
+			return;
+	}
+}
+
+/*! Функция сортировки массива строк (Быстрая сортировка)
+ * @param [in] array Массив нулл-терминированных строк
+ * @param [in] size Размер массива
+ * @param [in] comp Компаратор
+ */
 void quicksort(char **array, size_t size,
 	       int (*comp)(const char *, const char *))
 {
@@ -285,6 +308,11 @@ void quicksort(char **array, size_t size,
 
 	if (size < 2)
 		return;
+		
+	if (size < 10) {
+		bubblesort(array, size, comp);
+		return;
+	}
 
 	size_t l = 0, r = size - 1, p = (l + r) / 2;
 	while (l < r) {
@@ -305,29 +333,6 @@ void quicksort(char **array, size_t size,
 
 	quicksort(array, p, comp);
 	quicksort(array + p + 1, size - p - 1, comp);
-}
-
-/*! Функция сортировки массива строк (Быстрая сортировка)
- * @param [in] array Массив нулл-терминированных строк
- * @param [in] size Размер массива
- * @param [in] comp Компаратор
- */
-void bubblesort(char **array, size_t size,
-		int (*comp)(const char *, const char *))
-{
-	assert(array != NULL);
-
-	char found = 0;
-	for (size_t n = 0; n < size; ++n) {
-		found = 0;
-		for (size_t i = 0; i < size - 1; ++i)
-			if (comp(array[i], array[i + 1]) > 0) {
-				swap(&array[i], &array[i + 1]);
-				found = 1;
-			}
-		if (!found)
-			return;
-	}
 }
 
 /*! Функция записи массива строк в файл
