@@ -127,6 +127,12 @@ FILE* xfopen(const char* fname, const char* mod);
  */
 void* xmalloc(size_t size);
 
+/*! Функция выяснения размера открытого файла
+ * @param [in] file Указатель на файл
+ * @return Размер файла
+ */
+size_t file_size(FILE* file);
+
 int main(int argc, char *argv[])
 {
 	if (argc != 3) {
@@ -315,21 +321,8 @@ char *read_file(const char *filename)
 	assert(filename != NULL);
 
 	FILE *fp = xfopen(filename, "rb");
-
-#ifdef __unix__
-	struct stat st;
-	int err = fstat(fileno(fp), &st);
-	if (err != 0) {
-		printf("# ERROR: Failed to get file stats. Exiting...\n");
-		exit(1);
-	}
-	size_t size = st.st_size;
-#else
-	fseek(fp, 0L, SEEK_END);
-	size_t size = ftell(fp);
-	fseek(fp, 0L, SEEK_SET);
-#endif
-
+	size_t size = file_size(fp);
+	
 	char *retval = (char *)xmalloc(size + 1);
 
 	size_t readed = fread(retval, 1, size, fp);
@@ -470,5 +463,26 @@ void* xmalloc(size_t size)
 		exit(2);
 	}
 	
+	return retval;
+}
+
+size_t file_size(FILE* file) {
+	assert(file != NULL);
+
+	size_t retval = 0;
+#ifdef __unix__
+	struct stat st;
+	int err = fstat(fileno(file), &st);
+	if (err != 0) {
+		printf("# ERROR: Failed to get file stats. Exiting...\n");
+		exit(1);
+	}
+	retval = st.st_size;
+#else
+	fseek(fp, 0L, SEEK_END);
+	retval = ftell(file);
+	fseek(fp, 0L, SEEK_SET);
+#endif
+
 	return retval;
 }
