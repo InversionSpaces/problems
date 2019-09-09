@@ -112,6 +112,21 @@ void writefile(const char *filename, char **lines, size_t linenum);
  */
 void clearinput();
 
+/*! Функция гарантированного открытия файла
+ * Будет вызван exit, если открыть файл не удалось
+ * @param [in] fname Путь до файла
+ * @param [in] mod Опции открытия файла
+ * @return Указатель на открытый файл
+ */
+FILE* xfopen(const char* fname, const char* mod);
+
+/*! Функция гарантированного выделения памяти
+ * Будет вызван exit, если открыть  файл не удалось
+ * @param [in] size Колличество необходимой памяти в байтах
+ * @return Указатель на начало выделенной памяти
+ */
+void* xmalloc(size_t size);
+
 int main(int argc, char *argv[])
 {
 	if (argc != 3) {
@@ -299,12 +314,7 @@ char *readfile(const char *filename)
 {
 	assert(filename != NULL);
 
-	FILE *fp = fopen(filename, "rb");
-	if (fp == NULL) {
-		printf("# ERROR: Failed to open file: %s. Exiting...\n",
-		       filename);
-		exit(1);
-	}
+	FILE *fp = xfopen(filename, "rb");
 
 #ifdef __unix__
 	struct stat st;
@@ -320,11 +330,7 @@ char *readfile(const char *filename)
 	fseek(fp, 0L, SEEK_SET);
 #endif
 
-	char *retval = (char *)malloc(size + 1);
-	if (retval == NULL) {
-		printf("# ERROR: Failed to allocate memory. Exiting...\n");
-		exit(2);
-	}
+	char *retval = (char *)xmalloc(size + 1);
 
 	size_t readed = fread(retval, 1, size, fp);
 	if (readed != size) {
@@ -358,11 +364,7 @@ char **genpointers(const char *str, size_t numpoints, char stopc)
 {
 	assert(str != NULL);
 
-	char **retval = (char **)malloc(numpoints * sizeof(char *));
-	if (retval == NULL) {
-		printf("# ERROR: Failed to allocate memory. Exiting...\n");
-		exit(2);
-	}
+	char **retval = (char **)xmalloc(numpoints * sizeof(char *));
 
 	size_t pos = 0;
 	for (size_t i = 0; i < numpoints; ++i) {
@@ -432,12 +434,7 @@ void writefile(const char *filename, char **lines, size_t linenum)
 	assert(filename != NULL);
 	assert(lines != NULL);
 
-	FILE *fp = fopen(filename, "wb");
-	if (fp == NULL) {
-		printf("# ERROR: Failed to open file: %s. Exiting...\n",
-		       filename);
-		exit(1);
-	}
+	FILE *fp = xfopen(filename, "wb");
 
 	for (size_t i = 0; i < linenum; ++i) {
 		assert(lines[i] != NULL);
@@ -452,4 +449,24 @@ void clearinput()
 	int c;
 	while ((c = getchar()) != '\n' && c != EOF) {
 	}
+}
+
+FILE* xfopen(const char* fname, const char* mod) {
+	FILE* retval = fopen(fname, mod);
+	if (retval == NULL) {
+		printf("# ERROR: Failed to open file: %s. Exiting...\n", fname);
+		exit(1);
+	}
+	
+	return retval;
+}
+
+void* xmalloc(size_t size) {
+	void* retval = malloc(size);
+	if (retval == NULL) {
+		printf("# ERROR: Failed to allocate memory. Exiting...\n");
+		exit(2);
+	}
+	
+	return retval;
 }
