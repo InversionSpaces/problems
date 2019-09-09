@@ -21,19 +21,19 @@ size_t len(const char *str);
  * @param [in] c Символ
  * @return 1 если c - буква, 0 - иначе
  */
-int isalphac(const char c);
+int is_alphac(const char c);
 
 /*! Функция проверки символа на то, является ли он заглваной буквой
  * @param [in] c Символ
  * @return 1 если c - заглавная буква, 0 - иначе
  */
-int iscapitalc(const char c);
+int is_capitalc(const char c);
 
 /*! Функция перевода символа в строчный нижний регистр
  * @param [in] c Символ
  * @return c в нижнем регистре, если c - заглавная буква, c - иначе
  */
-char tolowerc(const char c);
+char to_lowerc(const char c);
 
 /*! Функция сравнения двух строк в лексиграфическом порядке с учётом
  * только букв строк, приведённых в нижний регистр
@@ -42,7 +42,7 @@ char tolowerc(const char c);
  * @return 1 если первая строка больше второй, 0 если они равны и \
  * -1 если первая меньше второй
  */
-int strcompare(const char *str1, const char *str2);
+int str_compare(const char *str1, const char *str2);
 
 /*! Функция сравнения инверсий двух строк в лексиграфическом порядке с
  * учётом только букв строк, приведённых в нижний регистр
@@ -51,7 +51,7 @@ int strcompare(const char *str1, const char *str2);
  * @return 1 если инверсия первой строки больше инверсии второй, \
  * 0 если они равны и -1 если инверсия первой меньше инверсии второй
  */
-int strrevcompare(const char *str1, const char *str2);
+int str_rev_compare(const char *str1, const char *str2);
 
 /*! Функция обмена значениями указателей на строки
  * @param [in] str1 Указатель для обмена
@@ -63,7 +63,7 @@ void swap(char **str1, char **str2);
  * @param [in] filename Путь к файлу
  * @return Нулл-терминированная строка с содержанием файла
  */
-char *readfile(const char *filename);
+char *read_file(const char *filename);
 
 /*! Функция замены символа в строке
  * @param [in] str Строка
@@ -82,14 +82,14 @@ size_t replace(char *str, char from, char to);
  *
  * @note UB, если количество stopc в str меньше, чем numpoints
  */
-char **genpointers(const char *str, size_t numpoints, char stopc);
+char **gen_pointers(const char *str, size_t numpoints, char stopc);
 
 /*! Функция сортировки массива строк (Быстрая сортировка)
  * @param [in] array Массив нулл-терминированных строк
  * @param [in] size Размер массива
  * @param [in] comp Компаратор
  */
-void bubblesort(char **array, size_t size,
+void bubble_sort(char **array, size_t size,
 		int (*comp)(const char *, const char *));
 
 /*! Функция сортировки массива строк (Быстрая сортировка)
@@ -97,7 +97,7 @@ void bubblesort(char **array, size_t size,
  * @param [in] size Размер массива
  * @param [in] comp Компаратор
  */
-void quicksort(char **array, size_t size,
+void quick_sort(char **array, size_t size,
 	       int (*comp)(const char *, const char *));
 
 /*! Функция записи массива строк в файл
@@ -105,12 +105,12 @@ void quicksort(char **array, size_t size,
  * @param [in] lines Массив строк
  * @param [in] linenum Размер массива строк
  */
-void writefile(const char *filename, char **lines, size_t linenum);
+void write_file(const char *filename, char **lines, size_t linenum);
 
 /*! Функция очистки буффера ввода
  * @note Честно скопипащено с SO. fseek и fflush не заработали на моей машине
  */
-void clearinput();
+void clear_input();
 
 /*! Функция гарантированного открытия файла
  * Будет вызван exit, если открыть файл не удалось
@@ -137,24 +137,24 @@ int main(int argc, char *argv[])
 	}
 
 	printf("# Reading file...\n");
-	char *file = readfile(argv[1]);
+	char *file = read_file(argv[1]);
 
 	printf("# Done\n# Processing...\n");
 	size_t linenum = replace(file, '\n', '\0');
-	char **lines = genpointers(file, linenum, '\0');
+	char **lines = gen_pointers(file, linenum, '\0');
 
 	printf("# Reverse or straight sorting? [r/s]\n");
 
 	char choice;
 	scanf("%c", &choice);
-	clearinput();
-	choice = tolowerc(choice);
+	clear_input();
+	choice = to_lowerc(choice);
 
 	int (*comp)(const char *, const char *);
 	if (choice == 's')
-		comp = strcompare;
+		comp = str_compare;
 	else if (choice == 'r')
-		comp = strrevcompare;
+		comp = str_rev_compare;
 	else {
 		printf("# Error unknown choice. Aborting...\n");
 		return 1;
@@ -162,19 +162,19 @@ int main(int argc, char *argv[])
 
 	printf("# Do you have too much time? [y/n]\n");
 	scanf("%c", &choice);
-	clearinput();
-	choice = tolowerc(choice);
+	clear_input();
+	choice = to_lowerc(choice);
 	if (choice == 'y')
-		bubblesort(lines, linenum, comp);
+		bubble_sort(lines, linenum, comp);
 	else if (choice == 'n')
-		quicksort(lines, linenum, comp);
+		quick_sort(lines, linenum, comp);
 	else {
 		printf("# Error unknown choice. Aborting...\n");
 		return 1;
 	}
 
 	printf("# Done\n# Writing file...\n");
-	writefile(argv[2], lines, linenum);
+	write_file(argv[2], lines, linenum);
 	printf("# Done\n# Exiting...\n");
 
 	free(file);
@@ -192,35 +192,35 @@ size_t len(const char *str)
 	return (size_t)(tmp - str);
 }
 
-int isalphac(const char c)
+int is_alphac(const char c)
 {
 	return ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z');
 }
 
-int iscapitalc(const char c)
+int is_capitalc(const char c)
 {
 	if ('A' <= c && c <= 'Z')
 		return 1;
 	return 0;
 }
 
-char tolowerc(const char c)
+char to_lowerc(const char c)
 {
-	if (iscapitalc(c))
+	if (is_capitalc(c))
 		return (c - TOLOWER_OFFSET);
 	return c;
 }
 
-int strcompare(const char *str1, const char *str2)
+int str_compare(const char *str1, const char *str2)
 {
 	assert(str1 != NULL);
 	assert(str2 != NULL);
 
 	size_t i = 0, j = 0;
 	while (str1[i] && str2[j]) {
-		while (str1[i] && !isalphac(str1[i]))
+		while (str1[i] && !is_alphac(str1[i]))
 			i++;
-		while (str2[j] && !isalphac(str2[j]))
+		while (str2[j] && !is_alphac(str2[j]))
 			j++;
 
 		if (!str1[i] && !str2[j])
@@ -230,8 +230,8 @@ int strcompare(const char *str1, const char *str2)
 		if (!str2[j])
 			return 1;
 
-		char lc1 = tolowerc(str1[i]);
-		char lc2 = tolowerc(str2[j]);
+		char lc1 = to_lowerc(str1[i]);
+		char lc2 = to_lowerc(str2[j]);
 
 		if (lc1 < lc2)
 			return -1;
@@ -253,16 +253,16 @@ int strcompare(const char *str1, const char *str2)
 	return 0;
 }
 
-int strrevcompare(const char *str1, const char *str2)
+int str_rev_compare(const char *str1, const char *str2)
 {
 	assert(str1 != NULL);
 	assert(str2 != NULL);
 
 	ssize_t i = len(str1) - 1, j = len(str2) - 1;
 	while (i >= 0 && j >= 0) {
-		while (i >= 0 && !isalphac(str1[i]))
+		while (i >= 0 && !is_alphac(str1[i]))
 			i--;
-		while (j >= 0 && !isalphac(str2[j]))
+		while (j >= 0 && !is_alphac(str2[j]))
 			j--;
 
 		if (i == -1 && j == -1)
@@ -272,8 +272,8 @@ int strrevcompare(const char *str1, const char *str2)
 		if (j == -1)
 			return 1;
 
-		char lc1 = tolowerc(str1[i]);
-		char lc2 = tolowerc(str2[j]);
+		char lc1 = to_lowerc(str1[i]);
+		char lc2 = to_lowerc(str2[j]);
 
 		if (lc1 < lc2)
 			return -1;
@@ -310,7 +310,7 @@ void swap(char **str1, char **str2)
 	*str2 = tmp;
 }
 
-char *readfile(const char *filename)
+char *read_file(const char *filename)
 {
 	assert(filename != NULL);
 
@@ -360,7 +360,7 @@ size_t replace(char *str, char from, char to)
 	return count;
 }
 
-char **genpointers(const char *str, size_t numpoints, char stopc)
+char** gen_pointers(const char *str, size_t numpoints, char stopc)
 {
 	assert(str != NULL);
 
@@ -377,7 +377,7 @@ char **genpointers(const char *str, size_t numpoints, char stopc)
 	return retval;
 }
 
-void bubblesort(char **array, size_t size,
+void bubble_sort(char **array, size_t size,
 		int (*comp)(const char *, const char *))
 {
 	assert(array != NULL);
@@ -395,7 +395,7 @@ void bubblesort(char **array, size_t size,
 	}
 }
 
-void quicksort(char **array, size_t size,
+void quick_sort(char **array, size_t size,
 	       int (*comp)(const char *, const char *))
 {
 	assert(array != NULL);
@@ -404,7 +404,7 @@ void quicksort(char **array, size_t size,
 		return;
 		
 	if (size < 10) {
-		bubblesort(array, size, comp);
+		bubble_sort(array, size, comp);
 		return;
 	}
 
@@ -425,11 +425,11 @@ void quicksort(char **array, size_t size,
 			p = l;
 	}
 
-	quicksort(array, p, comp);
-	quicksort(array + p + 1, size - p - 1, comp);
+	quick_sort(array, p, comp);
+	quick_sort(array + p + 1, size - p - 1, comp);
 }
 
-void writefile(const char *filename, char **lines, size_t linenum)
+void write_file(const char *filename, char **lines, size_t linenum)
 {
 	assert(filename != NULL);
 	assert(lines != NULL);
@@ -444,14 +444,15 @@ void writefile(const char *filename, char **lines, size_t linenum)
 	fclose(fp);
 }
 
-void clearinput()
+void clear_input()
 {
 	int c;
 	while ((c = getchar()) != '\n' && c != EOF) {
 	}
 }
 
-FILE* xfopen(const char* fname, const char* mod) {
+FILE* xfopen(const char* fname, const char* mod) 
+{
 	FILE* retval = fopen(fname, mod);
 	if (retval == NULL) {
 		printf("# ERROR: Failed to open file: %s. Exiting...\n", fname);
@@ -461,7 +462,8 @@ FILE* xfopen(const char* fname, const char* mod) {
 	return retval;
 }
 
-void* xmalloc(size_t size) {
+void* xmalloc(size_t size) 
+{
 	void* retval = malloc(size);
 	if (retval == NULL) {
 		printf("# ERROR: Failed to allocate memory. Exiting...\n");
