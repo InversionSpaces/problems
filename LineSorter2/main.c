@@ -380,8 +380,8 @@ char** gen_pointers(const char *str, size_t numpoints, char stopc)
 	return retval;
 }
 
-void bubble_sort(char **array, size_t size,
-		int (*comp)(const char *, const char *))
+void bubble_sort(char** array, size_t size,
+		int (*comp)(const char*, const char*))
 {
 	assert(array != NULL);
 
@@ -398,8 +398,8 @@ void bubble_sort(char **array, size_t size,
 	}
 }
 
-void quick_sort(char **array, size_t size,
-	       int (*comp)(const char *, const char *))
+void quick_sort(char** array, size_t size,
+	       int (*comp)(const char*, const char*))
 {
 	assert(array != NULL);
 
@@ -434,7 +434,7 @@ void quick_sort(char **array, size_t size,
 	quick_sort(p + 1, (size_t)((array + size) - (p + 1)), comp);
 }
 
-void write_file(const char *filename, char **lines, size_t linenum)
+void write_file(const char* filename, char** lines, size_t linenum)
 {
 	assert(filename != NULL);
 	assert(lines != NULL);
