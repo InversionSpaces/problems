@@ -133,6 +133,10 @@ void* xmalloc(size_t size);
  */
 size_t file_size(FILE* file);
 
+int cstrcmp(const void* p1, const void* p2) {
+	return strcmp(*(char* const*)p1, *(char* const*)p2);
+}
+
 int main(int argc, char *argv[])
 {
 	if (argc != 3) {
@@ -149,6 +153,7 @@ int main(int argc, char *argv[])
 	size_t linenum = replace(file, '\n', '\0');
 	char **lines = gen_pointers(file, linenum, '\0');
 
+/*
 	printf("# Reverse or straight sorting? [r/s]\n");
 
 	char choice;
@@ -178,6 +183,8 @@ int main(int argc, char *argv[])
 		printf("# Error unknown choice. Aborting...\n");
 		return 1;
 	}
+*/
+	qsort(lines, linenum, sizeof(char*), cstrcmp);
 
 	printf("# Done\n# Writing file...\n");
 	write_file(argv[2], lines, linenum);
@@ -223,36 +230,38 @@ int str_compare(const char *str1, const char *str2)
 	assert(str2 != NULL);
 
 	size_t i = 0, j = 0;
-	while (str1[i] && str2[j]) {
-		while (str1[i] && !is_alphac(str1[i]))
-			i++;
-		while (str2[j] && !is_alphac(str2[j]))
-			j++;
+	char* s1 = (char*)str1;
+	char* s2 = (char*)str2;
+	while (*s1 && *s2) {
+		while (*s1 && !is_alphac(*s1))
+			++s1;
+		while (*s2 && !is_alphac(*s2))
+			++s2;
 
-		if (!str1[i] && !str2[j])
+		if (!*s1 && !*s2)
 			return 0;
-		if (!str1[i])
+		if (!*s1)
 			return -1;
-		if (!str2[j])
+		if (!*s2)
 			return 1;
 
-		char lc1 = to_lowerc(str1[i]);
-		char lc2 = to_lowerc(str2[j]);
+		char lc1 = to_lowerc(*s1);
+		char lc2 = to_lowerc(*s2);
 
 		if (lc1 < lc2)
 			return -1;
 		if (lc1 > lc2)
 			return 1;
 
-		i++;
-		j++;
+		++s1;
+		++s2;
 	}
 
-	if (!str1[i] && !str2[j])
+	if (!*s1 && !*s2)
 		return 0;
-	if (!str1[i])
+	if (!*s1)
 		return -1;
-	if (!str2[j])
+	if (!*s2)
 		return 1;
 
 	assert(0); ///< Недостижимый код
@@ -395,22 +404,24 @@ void quick_sort(char **array, size_t size,
 
 	if (size < 2)
 		return;
-		
+	
 	if (size < 10) {
 		bubble_sort(array, size, comp);
 		return;
 	}
 
-	size_t l = 0, r = size - 1, p = (l + r) / 2;
+	char** l = array;
+	char** r = array + size - 1;
+	char** p = array + size / 2;
 	while (l < r) {
-		while (comp(array[l], array[p]) < 0 && l < p)
-			l++;
-		while (comp(array[r], array[p]) >= 0 && p < r)
-			r--;
+		while (comp(*l, *p) < 0 && l < p)
+			++l;
+		while (comp(*r, *p) >= 0 && p < r)
+			--r;
 		if (l == r)
 			break;
 
-		swap(&array[l], &array[r]);
+		swap(l, r);
 
 		if (l == p)
 			p = r;
@@ -418,8 +429,8 @@ void quick_sort(char **array, size_t size,
 			p = l;
 	}
 
-	quick_sort(array, p, comp);
-	quick_sort(array + p + 1, size - p - 1, comp);
+	quick_sort(array, (size_t)(p - array), comp);
+	quick_sort(p + 1, (size_t)((array + size) - (p + 1)), comp);
 }
 
 void write_file(const char *filename, char **lines, size_t linenum)
