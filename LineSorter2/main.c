@@ -133,9 +133,11 @@ void* xmalloc(size_t size);
  */
 size_t file_size(FILE* file);
 
+/*
 int cstrcmp(const void* p1, const void* p2) {
 	return strcmp(*(char* const*)p1, *(char* const*)p2);
 }
+*/
 
 int main(int argc, char *argv[])
 {
@@ -153,7 +155,6 @@ int main(int argc, char *argv[])
 	size_t linenum = replace(file, '\n', '\0');
 	char **lines = gen_pointers(file, linenum, '\0');
 
-/*
 	printf("# Reverse or straight sorting? [r/s]\n");
 
 	char choice;
@@ -183,8 +184,8 @@ int main(int argc, char *argv[])
 		printf("# Error unknown choice. Aborting...\n");
 		return 1;
 	}
-*/
-	qsort(lines, linenum, sizeof(char*), cstrcmp);
+	
+	//qsort(lines, linenum, sizeof(char*), cstrcmp);
 
 	printf("# Done\n# Writing file...\n");
 	write_file(argv[2], lines, linenum);
@@ -229,7 +230,6 @@ int str_compare(const char *str1, const char *str2)
 	assert(str1 != NULL);
 	assert(str2 != NULL);
 
-	size_t i = 0, j = 0;
 	char* s1 = (char*)str1;
 	char* s2 = (char*)str2;
 	while (*s1 && *s2) {
@@ -273,37 +273,38 @@ int str_rev_compare(const char *str1, const char *str2)
 	assert(str1 != NULL);
 	assert(str2 != NULL);
 
-	ssize_t i = len(str1) - 1, j = len(str2) - 1;
-	while (i >= 0 && j >= 0) {
-		while (i >= 0 && !is_alphac(str1[i]))
-			i--;
-		while (j >= 0 && !is_alphac(str2[j]))
-			j--;
+	char* s1 = (char*)str1 + (len(str1) - 1);
+	char* s2 = (char*)str2 + (len(str2) - 1);
+	while (s1 >= str1 && s2 >= str2) {
+		while (s1 >= str1 && !is_alphac(*s1))
+			--s1;
+		while (s2 >= str2 && !is_alphac(*s2))
+			--s2;
 
-		if (i == -1 && j == -1)
+		if (s1 + 1 == str1 && s2 + 1 == str2)
 			return 0;
-		if (i == -1)
+		if (s1 + 1 == str1)
 			return -1;
-		if (j == -1)
+		if (s2 + 1 == str2)
 			return 1;
 
-		char lc1 = to_lowerc(str1[i]);
-		char lc2 = to_lowerc(str2[j]);
+		char lc1 = to_lowerc(*s1);
+		char lc2 = to_lowerc(*s2);
 
 		if (lc1 < lc2)
 			return -1;
 		if (lc1 > lc2)
 			return 1;
 
-		i--;
-		j--;
+		--s1;
+		--s2;
 	}
 
-	if (i == -1 && j == -1)
+	if (s1 + 1 == str1 && s2 + 1 == str2)
 		return 0;
-	if (i == -1)
+	if (s1 + 1 == str1)
 		return -1;
-	if (j == -1)
+	if (s2 + 1 == str2)
 		return 1;
 
 	assert(0); ///< Недостижимый код
@@ -325,7 +326,7 @@ void swap(char **str1, char **str2)
 	*str2 = tmp;
 }
 
-char *read_file(const char *filename)
+char* read_file(const char *filename)
 {
 	assert(filename != NULL);
 
