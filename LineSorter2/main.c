@@ -13,9 +13,6 @@
  * @return Длина строки
  */
 size_t len(const char *str);
-
-#define TOLOWER_OFFSET \
-	('A' - 'a') ///< Сдвиг между заглавными и строчными буквами
 	
 typedef struct string string;
 
@@ -23,7 +20,10 @@ typedef struct string string;
 struct string {
 	char* str; ///< Указатель на начало строки
 	size_t len; ///< Длина строки
-}
+};
+
+#define TOLOWER_OFFSET \
+	('A' - 'a') ///< Сдвиг между заглавными и строчными буквами
 
 /*! Функция проверки символа на то, является ли он буквой
  * @param [in] c Символ
@@ -398,9 +398,9 @@ void bubble_sort(char** array, size_t size,
 	char found = 0;
 	for (size_t n = 0; n < size; ++n) {
 		found = 0;
-		for (size_t i = 0; i < size - 1; ++i)
-			if (comp(array[i], array[i + 1]) > 0) {
-				swap(&array[i], &array[i + 1]);
+		for (char** i = array; i - size + 1 < array; ++i)
+			if (comp(*i, *(i + 1)) > 0) {
+				swap(i, i + 1);
 				found = 1;
 			}
 		if (!found)
