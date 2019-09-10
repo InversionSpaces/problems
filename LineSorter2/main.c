@@ -149,11 +149,11 @@ int main(int argc, char *argv[])
 	}
 
 	printf("# Reading file...\n");
-	char *file = read_file(argv[1]);
+	char* file = read_file(argv[1]);
 
 	printf("# Done\n# Processing...\n");
 	size_t linenum = replace(file, '\n', '\0');
-	char **lines = gen_pointers(file, linenum, '\0');
+	char** lines = gen_pointers(file, linenum, '\0');
 
 	printf("# Reverse or straight sorting? [r/s]\n");
 
@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 	clear_input();
 	choice = to_lowerc(choice);
 
-	int (*comp)(const char *, const char *);
+	int (*comp)(const char*, const char*);
 	if (choice == 's')
 		comp = str_compare;
 	else if (choice == 'r')
@@ -199,7 +199,7 @@ size_t len(const char *str)
 {
 	assert(str != NULL);
 
-	char *tmp = (char *)str;
+	char* tmp = (char *)str;
 	while (*tmp)
 		++tmp;
 
@@ -321,7 +321,7 @@ void swap(char **str1, char **str2)
 	if (str1 == str2)
 		return;
 
-	char *tmp = *str1;
+	char* tmp = *str1;
 	*str1 = *str2;
 	*str2 = tmp;
 }
@@ -330,10 +330,10 @@ char* read_file(const char *filename)
 {
 	assert(filename != NULL);
 
-	FILE *fp = xfopen(filename, "rb");
+	FILE* fp = xfopen(filename, "rb");
 	size_t size = file_size(fp);
 	
-	char *retval = (char *)xmalloc(size + 1);
+	char* retval = (char*)xmalloc(size + 1);
 
 	size_t readed = fread(retval, 1, size, fp);
 	if (readed != size) {
@@ -367,7 +367,7 @@ char** gen_pointers(const char *str, size_t numpoints, char stopc)
 {
 	assert(str != NULL);
 
-	char **retval = (char **)xmalloc(numpoints * sizeof(char *));
+	char** retval = (char**)xmalloc(numpoints * sizeof(char*));
 
 	size_t pos = 0;
 	for (size_t i = 0; i < numpoints; ++i) {
