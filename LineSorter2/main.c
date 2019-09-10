@@ -16,6 +16,14 @@ size_t len(const char *str);
 
 #define TOLOWER_OFFSET \
 	('A' - 'a') ///< Сдвиг между заглавными и строчными буквами
+	
+typedef struct string string;
+
+//! Структура строки
+struct string {
+	char* str; ///< Указатель на начало строки
+	size_t len; ///< Длина строки
+}
 
 /*! Функция проверки символа на то, является ли он буквой
  * @param [in] c Символ
@@ -63,7 +71,7 @@ void swap(char **str1, char **str2);
  * @param [in] filename Путь к файлу
  * @return Нулл-терминированная строка с содержанием файла
  */
-char *read_file(const char *filename);
+char* read_file(const char *filename);
 
 /*! Функция замены символа в строке
  * @param [in] str Строка
@@ -71,7 +79,7 @@ char *read_file(const char *filename);
  * @param [in] to Заменяющий символ
  * @return Количество заменённых символов
  */
-size_t replace(char *str, char from, char to);
+size_t replace(char* str, char from, char to);
 
 /*! Функция создания массива указателей на оканчивающиеся
  * на данный символ подстроки
@@ -82,30 +90,30 @@ size_t replace(char *str, char from, char to);
  *
  * @note UB, если количество stopc в str меньше, чем numpoints
  */
-char **gen_pointers(const char *str, size_t numpoints, char stopc);
+char** gen_pointers(const char* str, size_t numpoints, char stopc);
 
 /*! Функция сортировки массива строк (Быстрая сортировка)
  * @param [in] array Массив нулл-терминированных строк
  * @param [in] size Размер массива
  * @param [in] comp Компаратор
  */
-void bubble_sort(char **array, size_t size,
-		int (*comp)(const char *, const char *));
+void bubble_sort(char** array, size_t size,
+		int (*comp)(const char*, const char*));
 
 /*! Функция сортировки массива строк (Быстрая сортировка)
  * @param [in] array Массив нулл-терминированных строк
  * @param [in] size Размер массива
  * @param [in] comp Компаратор
  */
-void quick_sort(char **array, size_t size,
-	       int (*comp)(const char *, const char *));
+void quick_sort(char** array, size_t size,
+	       int (*comp)(const char*, const char*));
 
 /*! Функция записи массива строк в файл
  * @param [in] filename Путь к файлу
  * @param [in] lines Массив строк
  * @param [in] linenum Размер массива строк
  */
-void write_file(const char *filename, char **lines, size_t linenum);
+void write_file(const char* filename, char** lines, size_t linenum);
 
 /*! Функция очистки буффера ввода
  * @note Честно скопипащено с SO. fseek и fflush не заработали на моей машине
@@ -185,8 +193,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
-	//qsort(lines, linenum, sizeof(char*), cstrcmp);
-
+	/*
+	 * qsort(lines, linenum, sizeof(char*), cstrcmp);
+	 */
+	 
 	printf("# Done\n# Writing file...\n");
 	write_file(argv[2], lines, linenum);
 	printf("# Done\n# Exiting...\n");
@@ -195,11 +205,11 @@ int main(int argc, char *argv[])
 	free(lines);
 }
 
-size_t len(const char *str)
+size_t len(const char* str)
 {
 	assert(str != NULL);
 
-	char* tmp = (char *)str;
+	char* tmp = (char*)str;
 	while (*tmp)
 		++tmp;
 
@@ -225,7 +235,7 @@ char to_lowerc(const char c)
 	return c;
 }
 
-int str_compare(const char *str1, const char *str2)
+int str_compare(const char* str1, const char* str2)
 {
 	assert(str1 != NULL);
 	assert(str2 != NULL);
@@ -268,7 +278,7 @@ int str_compare(const char *str1, const char *str2)
 	return 0;
 }
 
-int str_rev_compare(const char *str1, const char *str2)
+int str_rev_compare(const char* str1, const char* str2)
 {
 	assert(str1 != NULL);
 	assert(str2 != NULL);
@@ -311,7 +321,7 @@ int str_rev_compare(const char *str1, const char *str2)
 	return 0;
 }
 
-void swap(char **str1, char **str2)
+void swap(char** str1, char** str2)
 {
 	assert(str1 != NULL);
 	assert(*str1 != NULL);
@@ -326,7 +336,7 @@ void swap(char **str1, char **str2)
 	*str2 = tmp;
 }
 
-char* read_file(const char *filename)
+char* read_file(const char* filename)
 {
 	assert(filename != NULL);
 
@@ -348,7 +358,7 @@ char* read_file(const char *filename)
 	return retval;
 }
 
-size_t replace(char *str, char from, char to)
+size_t replace(char* str, char from, char to)
 {
 	assert(str != NULL);
 
@@ -363,7 +373,7 @@ size_t replace(char *str, char from, char to)
 	return count;
 }
 
-char** gen_pointers(const char *str, size_t numpoints, char stopc)
+char** gen_pointers(const char* str, size_t numpoints, char stopc)
 {
 	assert(str != NULL);
 
