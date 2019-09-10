@@ -19,7 +19,7 @@ typedef struct string string;
 //! Структура строки
 struct string {
 	char* str; ///< Указатель на начало строки
-	size_t len; ///< Длина строки
+	size_t len; ///< Длина строки с учётом нулл-символа
 };
 
 #define TOLOWER_OFFSET \
@@ -50,7 +50,16 @@ char to_lowerc(const char c);
  * @return 1 если первая строка больше второй, 0 если они равны и \
  * -1 если первая меньше второй
  */
-int str_compare(const char *str1, const char *str2);
+int str_compare(const char* str1, const char* str2);
+
+/*! Функция сравнения двух строк в лексиграфическом порядке с учётом
+ * только букв строк, приведённых в нижний регистр
+ * @param [in] str1 Первая строка
+ * @param [in] str2 Вторая строка
+ * @return 1 если первая строка больше второй, 0 если они равны и \
+ * -1 если первая меньше второй
+ */
+int string_compare(const string* str1, const string* str2);
 
 /*! Функция сравнения инверсий двух строк в лексиграфическом порядке с
  * учётом только букв строк, приведённых в нижний регистр
@@ -59,19 +68,34 @@ int str_compare(const char *str1, const char *str2);
  * @return 1 если инверсия первой строки больше инверсии второй, \
  * 0 если они равны и -1 если инверсия первой меньше инверсии второй
  */
-int str_rev_compare(const char *str1, const char *str2);
+int str_rev_compare(const char* str1, const char* str2);
+
+/*! Функция сравнения инверсий двух строк в лексиграфическом порядке с
+ * учётом только букв строк, приведённых в нижний регистр
+ * @param [in] str1 Первая строка
+ * @param [in] str2 Вторая строка
+ * @return 1 если инверсия первой строки больше инверсии второй, \
+ * 0 если они равны и -1 если инверсия первой меньше инверсии второй
+ */
+int string_rev_compare(const string* str1, const string* str2);
 
 /*! Функция обмена значениями указателей на строки
  * @param [in] str1 Указатель для обмена
  * @param [in] str2 Указатель для обмена
  */
-void swap(char **str1, char **str2);
+void swap_str(char** str1, char** str2);
+
+/*! Функция обмена значениями строк
+ * @param [in] str1 Указатель на строку для обмена
+ * @param [in] str2 Указатель на строку для обмена
+ */
+void swap_string(string* str1, string* str2);
 
 /*! Функция чтения файла в строку
  * @param [in] filename Путь к файлу
  * @return Нулл-терминированная строка с содержанием файла
  */
-char* read_file(const char *filename);
+char* read_file(const char* filename);
 
 /*! Функция замены символа в строке
  * @param [in] str Строка
@@ -90,14 +114,14 @@ size_t replace(char* str, char from, char to);
  *
  * @note UB, если количество stopc в str меньше, чем numpoints
  */
-char** gen_pointers(const char* str, size_t numpoints, char stopc);
+char** gen_strs(const char* str, size_t numpoints, char stopc);
 
-/*! Функция сортировки массива строк (Быстрая сортировка)
+/*! Функция сортировки массива строк (Сортировка пузырьком)
  * @param [in] array Массив нулл-терминированных строк
  * @param [in] size Размер массива
  * @param [in] comp Компаратор
  */
-void bubble_sort(char** array, size_t size,
+void bubble_sort_str(char** array, size_t size,
 		int (*comp)(const char*, const char*));
 
 /*! Функция сортировки массива строк (Быстрая сортировка)
@@ -105,15 +129,39 @@ void bubble_sort(char** array, size_t size,
  * @param [in] size Размер массива
  * @param [in] comp Компаратор
  */
-void quick_sort(char** array, size_t size,
+void quick_sort_str(char** array, size_t size,
 	       int (*comp)(const char*, const char*));
+	       
+/*! Функция сортировки массива строк (Сортировка пузырьком)
+ * @param [in] array Массив нулл-терминированных строк
+ * @param [in] size Размер массива
+ * @param [in] comp Компаратор
+ */
+void bubble_sort_string(string* array, size_t size,
+		int (*comp)(const string*, const string*));
+
+/*! Функция сортировки массива строк (Быстрая сортировка)
+ * @param [in] array Массив нулл-терминированных строк
+ * @param [in] size Размер массива
+ * @param [in] comp Компаратор
+ */
+void quick_sort_string(string* array, size_t size,
+	       int (*comp)(const string*, const string*));
 
 /*! Функция записи массива строк в файл
  * @param [in] filename Путь к файлу
  * @param [in] lines Массив строк
  * @param [in] linenum Размер массива строк
  */
-void write_file(const char* filename, char** lines, size_t linenum);
+void write_file_str(const char* filename, char** lines, size_t linenum);
+
+/*! Функция записи массива строк в файл
+ * @param [in] filename Путь к файлу
+ * @param [in] lines Массив строк
+ * @param [in] linenum Размер массива строк
+ */
+void write_file_strings(const char* filename, 
+						string* lines, size_t linenum);
 
 /*! Функция очистки буффера ввода
  * @note Честно скопипащено с SO. fseek и fflush не заработали на моей машине
@@ -141,11 +189,37 @@ void* xmalloc(size_t size);
  */
 size_t file_size(FILE* file);
 
-/*
-int cstrcmp(const void* p1, const void* p2) {
-	return strcmp(*(char* const*)p1, *(char* const*)p2);
+/*! Функция создания массива оканчивающихся
+ * на данный символ подстрок
+ * @param [in] str Исходная строка
+ * @param [in] numpoints Количество подстрок
+ * @param [in] stopc Символ окончания подстроки
+ * @return Массив подстрок
+ *
+ * @note UB, если количество stopc в str меньше, чем numpoints
+ */
+string* gen_strings(const char* str, size_t numpoints, char stopc);
+
+/*! Совместимый с stdlib компаратор-обёртка над @ref str_compare */
+int c_str_compare(const void* p1, const void* p2) 
+{
+	return str_compare(*(char* const*)p1, *(char* const*)p2);
 }
-*/
+
+/*! Совместимый с stdlib компаратор-обёртка над @ref string_compare */
+int c_string_compare(const void* p1, const void* p2) {
+	return string_compare((const string*)p1, (const string*)p2); 
+}
+
+/*! Совместимый с stdlib компаратор-обёртка над @ref str_rev_compare */
+int c_str_rev_compare(const void* p1, const void* p2) {
+	return str_rev_compare(*(char* const*)p1, *(char* const*)p2);
+}
+
+/*! Совместимый с stdlib компаратор-обёртка над @ref string_rev_compare */
+int c_string_rev_compare(const void* p1, const void* p2) {
+	return string_rev_compare((const string*)p1, (const string*)p2);
+}
 
 int main(int argc, char *argv[])
 {
@@ -161,8 +235,10 @@ int main(int argc, char *argv[])
 
 	printf("# Done\n# Processing...\n");
 	size_t linenum = replace(file, '\n', '\0');
-	char** lines = gen_pointers(file, linenum, '\0');
+	
+	string* lines = gen_strings(file, linenum, '\0');
 
+/*
 	printf("# Reverse or straight sorting? [r/s]\n");
 
 	char choice;
@@ -170,11 +246,11 @@ int main(int argc, char *argv[])
 	clear_input();
 	choice = to_lowerc(choice);
 
-	int (*comp)(const char*, const char*);
+	int (*comp)(const string*, const string*);
 	if (choice == 's')
-		comp = str_compare;
+		comp = string_compare;
 	else if (choice == 'r')
-		comp = str_rev_compare;
+		comp = string_rev_compare;
 	else {
 		printf("# Error unknown choice. Aborting...\n");
 		return 1;
@@ -185,20 +261,18 @@ int main(int argc, char *argv[])
 	clear_input();
 	choice = to_lowerc(choice);
 	if (choice == 'y')
-		bubble_sort(lines, linenum, comp);
+		bubble_sort_string(lines, linenum, comp);
 	else if (choice == 'n')
-		quick_sort(lines, linenum, comp);
+		quick_sort_string(lines, linenum, comp);
 	else {
 		printf("# Error unknown choice. Aborting...\n");
 		return 1;
 	}
-	
-	/*
-	 * qsort(lines, linenum, sizeof(char*), cstrcmp);
-	 */
+*/
+	qsort(lines, linenum, sizeof(string), c_string_rev_compare);
 	 
 	printf("# Done\n# Writing file...\n");
-	write_file(argv[2], lines, linenum);
+	write_file_strings(argv[2], lines, linenum);
 	printf("# Done\n# Exiting...\n");
 
 	free(file);
@@ -278,13 +352,20 @@ int str_compare(const char* str1, const char* str2)
 	return 0;
 }
 
-int str_rev_compare(const char* str1, const char* str2)
-{
+int string_compare(const string* str1, const string* str2) {
 	assert(str1 != NULL);
 	assert(str2 != NULL);
+	
+	return str_compare(str1->str, str2->str);
+}
 
-	char* s1 = (char*)str1 + (len(str1) - 1);
-	char* s2 = (char*)str2 + (len(str2) - 1);
+int __str_rev_compare(const char* str1, size_t len1, 
+					const char* str2, size_t len2) {
+	assert(str1 != NULL);
+	assert(str2 != NULL);
+	
+	char* s1 = (char*)str1 + len1 - 2;
+	char* s2 = (char*)str2 + len2 - 2;
 	while (s1 >= str1 && s2 >= str2) {
 		while (s1 >= str1 && !is_alphac(*s1))
 			--s1;
@@ -321,7 +402,24 @@ int str_rev_compare(const char* str1, const char* str2)
 	return 0;
 }
 
-void swap(char** str1, char** str2)
+int str_rev_compare(const char* str1, const char* str2)
+{
+	assert(str1 != NULL);
+	assert(str2 != NULL);
+
+	return __str_rev_compare(str1, len(str1), str2, len(str2));
+}
+
+int string_rev_compare(const string* str1, const string* str2) 
+{
+	assert(str1 != NULL);
+	assert(str2 != NULL);
+	
+	return __str_rev_compare(str1->str, str1->len, 
+								str2->str, str2->len);
+}
+
+void swap_str(char** str1, char** str2)
 {
 	assert(str1 != NULL);
 	assert(*str1 != NULL);
@@ -332,6 +430,19 @@ void swap(char** str1, char** str2)
 		return;
 
 	char* tmp = *str1;
+	*str1 = *str2;
+	*str2 = tmp;
+}
+
+void swap_string(string* str1, string* str2) 
+{
+	assert(str1 != NULL);
+	assert(str2 != NULL);
+	
+	if (str1 == str2)
+		return;
+		
+	string tmp = *str1;
 	*str1 = *str2;
 	*str2 = tmp;
 }
@@ -373,7 +484,7 @@ size_t replace(char* str, char from, char to)
 	return count;
 }
 
-char** gen_pointers(const char* str, size_t numpoints, char stopc)
+char** gen_strs(const char* str, size_t numpoints, char stopc)
 {
 	assert(str != NULL);
 
@@ -390,7 +501,28 @@ char** gen_pointers(const char* str, size_t numpoints, char stopc)
 	return retval;
 }
 
-void bubble_sort(char** array, size_t size,
+string* gen_strings(const char* str, size_t numpoints, char stopc) 
+{
+	assert(str != NULL);
+
+	string* retval = (string*)xmalloc(numpoints * sizeof(string));
+
+	size_t pos = 0;
+	for (size_t i = 0; i < numpoints; ++i) {
+		retval[i].str = (char*)str + pos;
+		
+		size_t spos = pos;
+		while (str[pos] != stopc)
+			pos++;
+		retval[i].len = pos - spos + 1;
+		
+		pos++;
+	}
+
+	return retval;
+}
+
+void bubble_sort_str(char** array, size_t size,
 		int (*comp)(const char*, const char*))
 {
 	assert(array != NULL);
@@ -400,7 +532,7 @@ void bubble_sort(char** array, size_t size,
 		found = 0;
 		for (char** i = array; i - size + 1 < array; ++i)
 			if (comp(*i, *(i + 1)) > 0) {
-				swap(i, i + 1);
+				swap_str(i, i + 1);
 				found = 1;
 			}
 		if (!found)
@@ -408,7 +540,25 @@ void bubble_sort(char** array, size_t size,
 	}
 }
 
-void quick_sort(char** array, size_t size,
+void bubble_sort_string(string* array, size_t size,
+		int (*comp)(const string*, const string*)) 
+{
+	assert(array != NULL);
+
+	char found = 0;
+	for (size_t n = 0; n < size; ++n) {
+		found = 0;
+		for (string* i = array; i - size + 1 < array; ++i)
+			if (comp(i, i + 1) > 0) {
+				swap_string(i, i + 1);
+				found = 1;
+			}
+		if (!found)
+			return;
+	}	
+}
+
+void quick_sort_str(char** array, size_t size,
 	       int (*comp)(const char*, const char*))
 {
 	assert(array != NULL);
@@ -417,13 +567,14 @@ void quick_sort(char** array, size_t size,
 		return;
 	
 	if (size < 10) {
-		bubble_sort(array, size, comp);
+		bubble_sort_str(array, size, comp);
 		return;
 	}
 
 	char** l = array;
 	char** r = array + size - 1;
 	char** p = array + size / 2;
+	
 	while (l < r) {
 		while (comp(*l, *p) < 0 && l < p)
 			++l;
@@ -432,7 +583,7 @@ void quick_sort(char** array, size_t size,
 		if (l == r)
 			break;
 
-		swap(l, r);
+		swap_str(l, r);
 
 		if (l == p)
 			p = r;
@@ -440,11 +591,48 @@ void quick_sort(char** array, size_t size,
 			p = l;
 	}
 
-	quick_sort(array, (size_t)(p - array), comp);
-	quick_sort(p + 1, (size_t)((array + size) - (p + 1)), comp);
+	quick_sort_str(array, (size_t)(p - array), comp);
+	quick_sort_str(p + 1, (size_t)((array + size) - (p + 1)), comp);
 }
 
-void write_file(const char* filename, char** lines, size_t linenum)
+void quick_sort_string(string* array, size_t size,
+	       int (*comp)(const string*, const string*))
+{
+	assert(array != NULL);
+
+	if (size < 2)
+		return;
+	
+	if (size < 10) {
+		bubble_sort_string(array, size, comp);
+		return;
+	}
+
+	string* l = array;
+	string* r = array + size - 1;
+	string* p = array + size / 2;
+	
+	while (l < r) {
+		while (comp(l, p) < 0 && l < p)
+			++l;
+		while (comp(r, p) >= 0 && p < r)
+			--r;
+		if (l == r)
+			break;
+
+		swap_string(l, r);
+
+		if (l == p)
+			p = r;
+		else if (r == p)
+			p = l;
+	}
+
+	quick_sort_string(array, (size_t)(p - array), comp);
+	quick_sort_string(p + 1, (size_t)((array + size) - (p + 1)), comp);
+}
+
+void write_file_str(const char* filename, char** lines, size_t linenum)
 {
 	assert(filename != NULL);
 	assert(lines != NULL);
@@ -457,6 +645,21 @@ void write_file(const char* filename, char** lines, size_t linenum)
 	}
 
 	fclose(fp);
+}
+
+void write_file_strings(const char* filename, 
+						string* lines, size_t linenum) 
+{
+	assert(filename != NULL);
+	assert(lines != NULL);
+	
+	char** slines = (char**)xmalloc(linenum * sizeof(char*));
+	for(size_t i = 0; i < linenum; i++)
+		slines[i] = lines[i].str;
+		
+	write_file_str(filename, slines, linenum);
+	
+	free(slines);
 }
 
 void clear_input()
