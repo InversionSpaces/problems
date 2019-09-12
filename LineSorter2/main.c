@@ -7,6 +7,81 @@
 #include <string.h>
 #include <assert.h>
 #include <sys/stat.h>
+#include <memory.h>
+#include <time.h>
+
+#define MEASURE(x) {clock_t start = clock(); \
+					x; \
+					clock_t stop = clock(); \
+					printf("%s: %lg\n", #x, (double)(stop - start) \
+										* 1000.0 / CLOCKS_PER_SEC); \
+					}	
+
+/*! Функция гарантированного выделения памяти
+ * Будет вызван exit, если выделить память не удалось
+ * @param [in] size Колличество необходимой памяти в байтах
+ * @return Указатель на начало выделенной памяти
+ */
+void* xmalloc(size_t size);
+
+typedef struct stack stack;
+
+/*! Структура стэка */
+struct stack {
+	size_t elsize;
+	void* bottom;
+	void* top;
+	size_t size;
+};
+
+#define INITIAL_STACK_SIZE 	(4096) ///< Начальный размер стэка в элементах
+#define STACK_CHUNK_SIZE 	(4096) ///< Размер блока для расширения в элементах
+
+/*! Функция инициализации стэка
+ * @param [in] elsize Размер элемента стэка в байтах
+ * @return Указатель на структуру инициализированного стэка
+ */
+stack* stack_init(size_t elsize);
+
+/*! Функция добавления в стэк
+ * @param [in] s Указатель на структуру стэка
+ * @param [in] p Указатель на добавляемый элемент
+ */
+void stack_push(stack* s, void* p);
+
+/*! Функция взятия из стэка
+ * @param [in] s Указатель на структуру стэка
+ * @param [out] p Указатель на возвращаемый элемент
+ */
+void stack_pop(stack* s, void* p);
+
+/*! Функция деинициализации стэка
+ * @param [in] s Указатель на структуру стэка
+ */
+void stack_deinit(stack* s);
+
+/*! Функция выяснения, пустой ли стэк
+ * @param [in] s Указатель на структуру стэка
+ * @return 1 если стэк пуст, 0 иначе
+ */
+char stack_is_empty(stack* s);
+
+/*! Функция обмена значениями двух элементов
+ * @param [in] a Указатель на первый элемент
+ * @param [in] b Указатель на второй элемент
+ * @param [in] t Указатель на буфер
+ * @param [in] s Размер элементов в байтах
+ */
+void swap(void* a, void* b, void* t, size_t s);
+
+/*! Функция сортировки (Быстрая сортировка)
+ * @param [in] arr Указатель на массив
+ * @param [in] n Количество элементов
+ * @param [in] size Размер одного элемента
+ * @param [in] cmp Компаратор
+ */
+void q_sort(void* arr, size_t n, size_t size, 
+			int (*cmp)(const void*, const void*));
 
 /*! Функция измерения длины нулл-терминированной строки с учётом нулл-символа
  * @param [in] str Нулл-турминированная строка
@@ -176,13 +251,6 @@ void clear_input();
  */
 FILE* xfopen(const char* fname, const char* mod);
 
-/*! Функция гарантированного выделения памяти
- * Будет вызван exit, если выделить память не удалось
- * @param [in] size Колличество необходимой памяти в байтах
- * @return Указатель на начало выделенной памяти
- */
-void* xmalloc(size_t size);
-
 /*! Функция выяснения размера открытого файла
  * @param [in] file Указатель на файл
  * @return Размер файла
@@ -231,14 +299,18 @@ int main(int argc, char *argv[])
 	}
 
 	printf("# Reading file...\n");
-	char* file = read_file(argv[1]);
+	//char* file = read_file(argv[1]);
+	char* file;
+	MEASURE(file = read_file(argv[1]))
 
 	printf("# Done\n# Processing...\n");
-	size_t linenum = replace(file, '\n', '\0');
-	
-	string* lines = gen_strings(file, linenum, '\0');
+	//size_t linenum = replace(file, '\n', '\0');
+	size_t linenum;
+	MEASURE(linenum = replace(file, '\n', '\0'))
+	//string* lines = gen_strings(file, linenum, '\0');
+	string* lines;
+	MEASURE(lines = gen_strings(file, linenum, '\0'))
 
-/*
 	printf("# Reverse or straight sorting? [r/s]\n");
 
 	char choice;
@@ -246,16 +318,17 @@ int main(int argc, char *argv[])
 	clear_input();
 	choice = to_lowerc(choice);
 
-	int (*comp)(const string*, const string*);
+	int (*comp)(const void*, const void*);
 	if (choice == 's')
-		comp = string_compare;
+		comp = c_string_compare;
 	else if (choice == 'r')
-		comp = string_rev_compare;
+		comp = c_string_rev_compare;
 	else {
 		printf("# Error unknown choice. Aborting...\n");
 		return 1;
 	}
 
+/*
 	printf("# Do you have too much time? [y/n]\n");
 	scanf("%c", &choice);
 	clear_input();
@@ -269,10 +342,14 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 */
-	qsort(lines, linenum, sizeof(string), c_string_rev_compare);
-	 
+
+	//quick_sort_string(lines, linenum, string_compare);
+	//q_sort(lines, linenum, sizeof(string), comp);
+	MEASURE(q_sort(lines, linenum, sizeof(string), comp))
+	
 	printf("# Done\n# Writing file...\n");
-	write_file_strings(argv[2], lines, linenum);
+	//write_file_strings(argv[2], lines, linenum);
+	MEASURE(write_file_strings(argv[2], lines, linenum))
 	printf("# Done\n# Exiting...\n");
 
 	free(file);
@@ -710,4 +787,130 @@ size_t file_size(FILE* file) {
 #endif
 
 	return retval;
+}
+
+stack* stack_init(size_t elsize) 
+{
+	stack* retval = (stack*)xmalloc(sizeof(stack));
+	retval->elsize = elsize;
+	retval->size = INITIAL_STACK_SIZE * elsize;
+	retval->bottom = xmalloc(retval->size);
+	retval->top = retval->bottom;
+	return retval;
+}
+
+void stack_push(stack* s, void* p) 
+{
+	assert(s != NULL);
+	assert(p != NULL);
+	
+	if (s->size == (size_t)(s->top - s->bottom)) 
+	{
+		size_t nsize = s->size + STACK_CHUNK_SIZE * s->elsize;
+		s->bottom = realloc(s->bottom, nsize);
+		s->top = s->bottom + s->size;
+		s->size = nsize;
+	}
+	memcpy(s->top, p, s->elsize);
+	s->top += s->elsize;
+}
+
+void stack_pop(stack* s, void* p) 
+{
+	assert(s != NULL);
+	assert(p != NULL);
+	
+	s->top -= s->elsize;
+	memcpy(p, s->top, s->elsize);
+}
+
+void stack_deinit(stack* s) {
+	assert(p != NULL);
+	
+	free(s->bottom);
+	free(s);
+}
+
+char stack_is_empty(stack* s) {
+	assert(s != NULL);
+	
+	return (s->top == s->bottom);
+}
+
+void swap(void* a, void* b, void* t, size_t s)
+{
+	assert(a != NULL);
+	assert(b != NULL);
+	assert(t != NULL);
+	
+	memcpy(t, a, s);
+	memcpy(a, b, s);
+	memcpy(b, t, s);
+}
+
+void q_sort(void* arr, size_t n, size_t size, 
+			int (*cmp)(const void*, const void*)) {
+	assert(arr != NULL);			
+				
+	stack* st = stack_init(sizeof(void*));
+	void* t = xmalloc(size);
+	
+	void* l = arr;
+	void* r = arr + size * (n - 1);
+	
+	void* ls = NULL;
+	void* rs = NULL;
+	void* p = NULL;
+	
+	stack_push(st, &r);
+	stack_push(st, &l);
+	
+	while (!stack_is_empty(st)) 
+	{		
+		stack_pop(st, &l);
+		stack_pop(st, &r);
+		
+		size_t tsize = (r - l) / size + 1;
+		
+		if (tsize < 2) 
+			continue;
+		
+		ls = l;
+		rs = r;
+		p = l + (tsize / 2) * size;
+		
+		while (l < r) {
+			while (cmp(p, l) > 0 && l < p)
+				l += size;
+			while (cmp(p, r) <= 0 && r > p)
+				r -= size;
+				
+			if (l == r) break;
+		
+			swap(l, r, t, size);
+			
+			if (p == l)
+				p = r;
+			else if (p == r)
+				p = l;
+		}
+		
+		if (p > ls)
+		{
+			p -= size;
+			stack_push(st, &p);
+			p += size;
+			stack_push(st, &ls);
+		}
+		if (p < rs)
+		{
+			stack_push(st, &rs);
+			p += size;
+			stack_push(st, &p);
+			p -= size;
+		}
+	}
+	
+	stack_deinit(st);
+	free(t);
 }
