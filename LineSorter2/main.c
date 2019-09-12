@@ -825,7 +825,7 @@ void stack_pop(stack* s, void* p)
 }
 
 void stack_deinit(stack* s) {
-	assert(p != NULL);
+	assert(s != NULL);
 	
 	free(s->bottom);
 	free(s);

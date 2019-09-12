@@ -19,8 +19,8 @@ void swapStrings(char **str1, char **str2) {
 }
 
 
-#define STR_VEC_INTIAL_SIZE (32) ///< Начальный размер вектора строк в элементах
-#define STR_VEC_RESIZE_CHUNK (32) ///< Добавляемый при необходимости размер в элементах
+#define STR_VEC_INTIAL_SIZE (1024) ///< Начальный размер вектора строк в элементах
+#define STR_VEC_RESIZE_CHUNK (2048) ///< Добавляемый при необходимости размер в элементах
 
 
 /// @details Структура вектора строк
