@@ -10,12 +10,17 @@
 #include <memory.h>
 #include <time.h>
 
-#define MEASURE(x) {clock_t start = clock(); \
+#ifndef NMEASURE
+#define MEASURE(x) {\
+					clock_t start = clock(); \
 					x; \
 					clock_t stop = clock(); \
-					printf("%s: %lg\n", #x, (double)(stop - start) \
+					printf("## MEASURE %s: %lg ms\n", #x, (double)(stop - start) \
 										* 1000.0 / CLOCKS_PER_SEC); \
-					}	
+					}
+#else
+#define MEASURE(x) x;
+#endif
 
 /*! Функция гарантированного выделения памяти
  * Будет вызван exit, если выделить память не удалось
@@ -28,10 +33,10 @@ typedef struct stack stack;
 
 /*! Структура стэка */
 struct stack {
-	size_t elsize;
-	void* bottom;
-	void* top;
-	size_t size;
+	size_t elsize; ///< Размер одного элемента в байтах
+	void* bottom; ///< Указатель на начало памяти стэка
+	void* top; ///< Указатель на верхний элемент стэка
+	size_t size; ///< Размер стэка в байтах
 };
 
 #define INITIAL_STACK_SIZE 	(4096) ///< Начальный размер стэка в элементах
@@ -83,7 +88,8 @@ void swap(void* a, void* b, void* t, size_t s);
 void q_sort(void* arr, size_t n, size_t size, 
 			int (*cmp)(const void*, const void*));
 
-/*! Функция измерения длины нулл-терминированной строки с учётом нулл-символа
+/*! Функция измерения длины нулл-терминированной строки \
+ * с учётом нулл-символа
  * @param [in] str Нулл-турминированная строка
  * @return Длина строки
  */
@@ -289,7 +295,7 @@ int c_string_rev_compare(const void* p1, const void* p2) {
 	return string_rev_compare((const string*)p1, (const string*)p2);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 	if (argc != 3) {
 		printf("# LineSorter v2 by InversionSpaces\n");
@@ -314,7 +320,10 @@ int main(int argc, char *argv[])
 	printf("# Reverse or straight sorting? [r/s]\n");
 
 	char choice;
-	scanf("%c", &choice);
+	while (scanf("%c", &choice) == 0) 
+	{
+		printf("Try choosing again\n"); ///< Не должны тут оказаться
+	}
 	clear_input();
 	choice = to_lowerc(choice);
 
@@ -331,6 +340,10 @@ int main(int argc, char *argv[])
 /*
 	printf("# Do you have too much time? [y/n]\n");
 	scanf("%c", &choice);
+	while (scanf("%c", &choice) == 0) 
+	{
+		printf("Try choosing again\n"); ///< Не должны тут оказаться
+	}
 	clear_input();
 	choice = to_lowerc(choice);
 	if (choice == 'y')
@@ -344,7 +357,6 @@ int main(int argc, char *argv[])
 */
 
 	//quick_sort_string(lines, linenum, string_compare);
-	//q_sort(lines, linenum, sizeof(string), comp);
 	MEASURE(q_sort(lines, linenum, sizeof(string), comp))
 	
 	printf("# Done\n# Writing file...\n");
