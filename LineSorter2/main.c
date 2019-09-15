@@ -311,7 +311,7 @@ void sort_file_lines(const char* infile, const char* outfile,
 #define Q_SORT_TEST_ITERATIONS (10) ///< Количество итераций теста q_sort
 #define Q_SORT_TEST_MAX_SIZE (1000) ///< Максимальная длина массива для теста q_sort
 #define Q_SORT_TEST_MIN_SIZE (100) ///< Минимальная длина массива для теста q_sort
-#defien Q_SORT_TEST_MAX_INT (1000) ///< Максимальный размер элемента для теста q_sort
+#define Q_SORT_TEST_MAX_INT (1000) ///< Максимальный размер элемента для теста q_sort
 
 /*! Совместимый с stdlib компаратор для int */
 int c_int_cmp(const void* a, const void* b);
