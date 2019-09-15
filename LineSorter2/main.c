@@ -39,8 +39,8 @@ struct stack {
 	size_t size; ///< Размер стэка в байтах
 };
 
-#define INITIAL_STACK_SIZE 	(4096) ///< Начальный размер стэка в элементах
-#define STACK_CHUNK_SIZE 	(4096) ///< Размер блока для расширения в элементах
+#define INITIAL_STACK_SIZE 	(1024) ///< Начальный размер стэка в элементах
+#define STACK_CHUNK_SIZE 	(1024) ///< Размер блока для расширения в элементах
 
 /*! Функция инициализации стэка
  * @param [in] elsize Размер элемента стэка в байтах
@@ -282,7 +282,7 @@ int c_str_compare(const void* p1, const void* p2)
 
 /*! Совместимый с stdlib компаратор-обёртка над @ref string_compare */
 int c_string_compare(const void* p1, const void* p2) {
-	return string_compare((const string*)p1, (const string*)p2); 
+	return string_compare((const string*)p1, (const string*)p2);
 }
 
 /*! Совместимый с stdlib компаратор-обёртка над @ref str_rev_compare */
@@ -295,77 +295,111 @@ int c_string_rev_compare(const void* p1, const void* p2) {
 	return string_rev_compare((const string*)p1, (const string*)p2);
 }
 
+/*! Функция для вывода usage
+ * @param [in] name Название программы
+ */
+void print_usage(const char* name);
+
+/*! Функция сортировки строк файла и вывода результата в другой файл
+ * @param [in] infile Путь до входного файла
+ * @param [in] outfile Путь до выходного файла
+ * @param [in] reverse 0 - прямая сортировка, иначе - обратная
+ */
+void sort_file_lines(const char* infile, const char* outfile, 
+						char reverse);
+
+#define Q_SORT_TEST_ITERATIONS (10) ///< Количество итераций теста q_sort
+#define Q_SORT_TEST_MAX_SIZE (1000) ///< Максимальная длина массива для теста q_sort
+#define Q_SORT_TEST_MIN_SIZE (100) ///< Минимальная длина массива для теста q_sort
+#defien Q_SORT_TEST_MAX_INT (1000) ///< Максимальный размер элемента для теста q_sort
+
+/*! Совместимый с stdlib компаратор для int */
+int c_int_cmp(const void* a, const void* b);
+			
+/*! Функция тестирования @ref q_sort */
+void test_q_sort();
+
 int main(int argc, char* argv[])
 {
-	if (argc != 3) {
-		printf("# LineSorter v2 by InversionSpaces\n");
-		printf("# Sorts lines of INPUT and writes it to OUPUT\n");
-		printf("# Usage: %s INPUT OUTPUT\n", argv[0]);
-		return 1;
+	#ifndef TEST
+	if (argc != 4) {
+		print_usage(argv[0]);
+		return 0;
 	}
 
+	sort_file_lines(argv[1], argv[2], to_lowerc(argv[3][0]) == 'r');
+	#else
+	test_q_sort();
+	#endif
+}
+
+void test_q_sort() 
+{
+	for (int i = 0; i < Q_SORT_TEST_ITERATIONS; ++i)
+	{
+		int size = 
+			rand() % (Q_SORT_TEST_MAX_SIZE - Q_SORT_TEST_MIN_SIZE) 
+			+ Q_SORT_TEST_MIN_SIZE;
+		int* arr = xmalloc(sizeof(int) * size);
+		for (int j = 0; j < size; ++j)
+			arr[j] = rand();
+			
+		q_sort(arr, size, sizeof(int), c_int_cmp);
+		
+		for (int j = 0; j < size - 1; ++j)
+			if (arr[j] > arr[j + 1])
+			{
+				printf("# q_sort test failed on array:\n");
+				for (int k = 0; k < size; ++k)
+					printf("%d ", arr[k]);
+				exit(3);
+			}
+	}
+	
+	printf("# q_sort test passed\n");
+}
+
+int c_int_cmp(const void* a, const void* b)
+{
+	return (*(const int*)a) - (*(const int*)b);
+}
+
+void sort_file_lines(const char* infile, const char* outfile, 
+						char reverse)
+{
+	assert(infile != NULL);
+	assert(outfile != NULL);
+	
 	printf("# Reading file...\n");
-	//char* file = read_file(argv[1]);
+	
 	char* file;
-	MEASURE(file = read_file(argv[1]))
+	MEASURE(file = read_file(infile))
 
 	printf("# Done\n# Processing...\n");
-	//size_t linenum = replace(file, '\n', '\0');
+	
 	size_t linenum;
 	MEASURE(linenum = replace(file, '\n', '\0'))
-	//string* lines = gen_strings(file, linenum, '\0');
+	
 	string* lines;
 	MEASURE(lines = gen_strings(file, linenum, '\0'))
 
-	printf("# Reverse or straight sorting? [r/s]\n");
-
-	char choice;
-	while (scanf("%c", &choice) == 0) 
-	{
-		printf("Try choosing again\n"); ///< Не должны тут оказаться
-	}
-	clear_input();
-	choice = to_lowerc(choice);
-
-	int (*comp)(const void*, const void*);
-	if (choice == 's')
-		comp = c_string_compare;
-	else if (choice == 'r')
-		comp = c_string_rev_compare;
-	else {
-		printf("# Error unknown choice. Aborting...\n");
-		return 1;
-	}
-
-/*
-	printf("# Do you have too much time? [y/n]\n");
-	scanf("%c", &choice);
-	while (scanf("%c", &choice) == 0) 
-	{
-		printf("Try choosing again\n"); ///< Не должны тут оказаться
-	}
-	clear_input();
-	choice = to_lowerc(choice);
-	if (choice == 'y')
-		bubble_sort_string(lines, linenum, comp);
-	else if (choice == 'n')
-		quick_sort_string(lines, linenum, comp);
-	else {
-		printf("# Error unknown choice. Aborting...\n");
-		return 1;
-	}
-*/
-
-	//quick_sort_string(lines, linenum, string_compare);
-	MEASURE(q_sort(lines, linenum, sizeof(string), comp))
+	MEASURE(q_sort(lines, linenum, sizeof(string), 
+					reverse ? c_string_rev_compare : c_string_compare));
 	
 	printf("# Done\n# Writing file...\n");
-	//write_file_strings(argv[2], lines, linenum);
-	MEASURE(write_file_strings(argv[2], lines, linenum))
+	
+	MEASURE(write_file_strings(outfile, lines, linenum))
 	printf("# Done\n# Exiting...\n");
 
 	free(file);
 	free(lines);
+}
+
+void print_usage(const char* name) 
+{
+	printf("# LineSorter v2 by InversionSpaces\n");
+	printf("# Sorts lines of INPUT and writes it to OUPUT\n");
+	printf("# Usage: %s INPUT OUTPUT STRAIGHT|REVERSE\n", name);
 }
 
 size_t len(const char* str)
@@ -441,7 +475,8 @@ int str_compare(const char* str1, const char* str2)
 	return 0;
 }
 
-int string_compare(const string* str1, const string* str2) {
+int string_compare(const string* str1, const string* str2) 
+{
 	assert(str1 != NULL);
 	assert(str2 != NULL);
 	
@@ -449,7 +484,8 @@ int string_compare(const string* str1, const string* str2) {
 }
 
 int __str_rev_compare(const char* str1, size_t len1, 
-					const char* str2, size_t len2) {
+					const char* str2, size_t len2) 
+{
 	assert(str1 != NULL);
 	assert(str2 != NULL);
 	
@@ -780,7 +816,8 @@ void* xmalloc(size_t size)
 	return retval;
 }
 
-size_t file_size(FILE* file) {
+size_t file_size(FILE* file) 
+{
 	assert(file != NULL);
 
 	size_t retval = 0;
@@ -836,14 +873,16 @@ void stack_pop(stack* s, void* p)
 	memcpy(p, s->top, s->elsize);
 }
 
-void stack_deinit(stack* s) {
+void stack_deinit(stack* s) 
+{
 	assert(s != NULL);
 	
 	free(s->bottom);
 	free(s);
 }
 
-char stack_is_empty(stack* s) {
+char stack_is_empty(stack* s) 
+{
 	assert(s != NULL);
 	
 	return (s->top == s->bottom);
@@ -861,7 +900,8 @@ void swap(void* a, void* b, void* t, size_t s)
 }
 
 void q_sort(void* arr, size_t n, size_t size, 
-			int (*cmp)(const void*, const void*)) {
+			int (*cmp)(const void*, const void*)) 
+{
 	assert(arr != NULL);			
 				
 	stack* st = stack_init(sizeof(void*));
@@ -907,14 +947,14 @@ void q_sort(void* arr, size_t n, size_t size,
 				p = l;
 		}
 		
-		if (p > ls)
+		if (p > ls && p - size > ls)
 		{
 			p -= size;
 			stack_push(st, &p);
 			p += size;
 			stack_push(st, &ls);
 		}
-		if (p < rs)
+		if (p < rs && p + size < rs)
 		{
 			stack_push(st, &rs);
 			p += size;
