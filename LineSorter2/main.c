@@ -1323,10 +1323,10 @@ size_t replace(char *str, char from, char to)
 	ASSERT(str != NULL);
 
 	size_t count = 0;
-	for (size_t i = 0; str[i]; ++i) {
-		if (str[i] == from) {
-			str[i] = to;
-			count++;
+	for (; *str; ++str) {
+		if (*str == from) {
+			*str = to;
+			++count;
 		}
 	}
 
