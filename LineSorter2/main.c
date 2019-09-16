@@ -1486,7 +1486,7 @@ void write_file_str(const char *filename, char **lines, size_t linenum)
 	ASSERT(filename != NULL);
 	ASSERT(lines != NULL);
 
-	FILE *fp = xfopen(filename, "wb");
+	FILE *fp = xfopen(filename, "wt");
 
 	for (size_t i = 0; i < linenum; ++i) {
 		ASSERT(lines[i] != NULL);
@@ -1501,15 +1501,14 @@ void write_file_strings(const char *filename, string *lines, size_t linenum)
 	ASSERT(filename != NULL);
 	ASSERT(lines != NULL);
 
-	char **slines = (char **)xmalloc(linenum * sizeof(char *));
-	for (size_t i = 0; i < linenum; i++) {
+	FILE *fp = xfopen(filename, "wt");
+
+	for (size_t i = 0; i < linenum; ++i) {
 		ASSERT(lines[i].str != NULL);
-		slines[i] = lines[i].str;
+		fprintf(fp, "%s\n", lines[i].str);
 	}
 
-	write_file_str(filename, slines, linenum);
-
-	free(slines);
+	fclose(fp);
 }
 
 void clear_input()
