@@ -114,7 +114,7 @@ struct string {
 	size_t len; ///< Длина строки с учётом нулл-символа
 };
 
-#define TOLOWER_OFFSET                                                         \
+#define TOLOWER_OFFSET \
 	('A' - 'a') ///< Сдвиг между заглавными и строчными буквами
 
 /*! Функция проверки символа на то, является ли он буквой
@@ -1121,7 +1121,7 @@ void sort_file_lines(const char *infile, const char *outfile, char reverse)
 void print_usage(const char *name)
 {
 	printf("# LineSorter v2 by InversionSpaces\n");
-	printf("# Sorts lines of INPUT and writes it to OUPUT\n");
+	printf("# Sorts lines of INPUT in STRAIGHT|REVERSE order and writes it to OUPUT\n");
 	printf("# Usage: %s INPUT OUTPUT STRAIGHT|REVERSE\n", name);
 }
 
@@ -1306,7 +1306,8 @@ char *read_file(const char *filename)
 
 	size_t readed = fread(retval, 1, size, fp);
 	if (readed != size) {
-		printf("# ERROR: Failed to read file. Exiting...\n");
+		printf("# ERROR: Failed to read file: %s. \
+					Exiting...\n", filename);
 		fclose(fp);
 		exit(2);
 	}
@@ -1361,10 +1362,10 @@ string *gen_strings(const char *str, size_t numpoints, char stopc)
 
 		size_t spos = pos;
 		while (str[pos] != stopc)
-			pos++;
+			++pos;
 		retval[i].len = pos - spos + 1;
 
-		pos++;
+		++pos;
 	}
 
 	return retval;
@@ -1501,8 +1502,10 @@ void write_file_strings(const char *filename, string *lines, size_t linenum)
 	ASSERT(lines != NULL);
 
 	char **slines = (char **)xmalloc(linenum * sizeof(char *));
-	for (size_t i = 0; i < linenum; i++)
+	for (size_t i = 0; i < linenum; i++) {
+		ASSERT(lines[i].str != NULL);
 		slines[i] = lines[i].str;
+	}
 
 	write_file_str(filename, slines, linenum);
 
@@ -1543,18 +1546,18 @@ size_t file_size(FILE *file)
 	ASSERT(file != NULL);
 
 	size_t retval = 0;
+	
 #ifdef __unix__
 	struct stat st;
 	int err = fstat(fileno(file), &st);
 	if (err != 0) {
-		printf("# ERROR: Failed to get file stats. Exiting...\n");
-		exit(1);
+#endif
+		fseek(file, 0L, SEEK_END);
+		retval = ftell(file);
+		fseek(file, 0L, SEEK_SET);
+#ifdef __unix__
 	}
 	retval = st.st_size;
-#else
-	fseek(fp, 0L, SEEK_END);
-	retval = ftell(file);
-	fseek(fp, 0L, SEEK_SET);
 #endif
 
 	return retval;
@@ -1671,14 +1674,14 @@ void q_sort(void *arr, size_t n, size_t size,
 		if (p > ls && p - size > ls) {
 			p -= size;
 			stack_push(st, &p);
-			p += size;
+			p += size; // Для следующего if
 			stack_push(st, &ls);
 		}
 		if (p < rs && p + size < rs) {
 			stack_push(st, &rs);
 			p += size;
 			stack_push(st, &p);
-			//p -= size;
+			//p -= size; // Для симметрии
 		}
 	}
 
