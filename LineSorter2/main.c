@@ -42,7 +42,7 @@ void *xmalloc(size_t size);
 
 typedef struct stack stack;
 
-/*! Структура стэка */
+//! Структура стэка
 struct stack {
 	size_t elsize; ///< Размер одного элемента в байтах
 	void *bottom; ///< Указатель на начало памяти стэка
