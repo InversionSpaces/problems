@@ -10,24 +10,24 @@
 #include <time.h>
 
 #ifndef NMEASURE
-#define MEASURE(x)                                                     \
-	{                                                                  \
-		clock_t start = clock();                                       \
-		x;                                                             \
-		clock_t stop = clock();                                        \
-		printf("## MEASURE (%s): %lg ms\n", #x,                          \
-		       (double)(stop - start) * 1000.0 / CLOCKS_PER_SEC);      \
+#define MEASURE(x)														\
+	{																	\
+		clock_t start = clock();										\
+		x;																\
+		clock_t stop = clock();											\
+		printf("\033[32;1m## MEASURE (%s): %lg ms\033[0m\n", #x,		\
+		       (double)(stop - start) * 1000.0 / CLOCKS_PER_SEC);		\
 	}
 #else
 #define MEASURE(x) x;
 #endif
 
 #ifndef NDEBUG
-#define ASSERT(x) 															\
-	if (!(x)) {																\
-		printf("## ASSERT FAILED (%s), file: %s, func: %s, line: %d\n", 	\
-				#x, __FILE__, __PRETTY_FUNCTION__, __LINE__);				\
-		exit(4);															\
+#define ASSERT(x) 																			\
+	if (!(x)) {																				\
+		printf("\033[31;1m## ASSERT FAILED (%s), file: %s, func: %s, line: %d\033[0m\n", 	\
+				#x, __FILE__, __PRETTY_FUNCTION__, __LINE__);								\
+		exit(4);																			\
 	}
 #else
 #define ASSERT(x) x;
@@ -1676,6 +1676,7 @@ void q_sort(void *arr, size_t n, size_t size,
 			p += size; // Для следующего if
 			stack_push(st, &ls);
 		}
+		
 		if (p < rs && p + size < rs) {
 			stack_push(st, &rs);
 			p += size;
