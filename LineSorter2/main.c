@@ -1421,28 +1421,28 @@ void quick_sort_str(char **array, size_t size,
 		return;
 	}
 
-	char **l = array;
-	char **r = array + size - 1;
-	char **p = array + size / 2;
+	char **left = array;
+	char **right = array + size - 1;
+	char **pivot = array + size / 2;
 
-	while (l < r) {
-		while (comp(*l, *p) < 0 && l < p)
-			++l;
-		while (comp(*r, *p) >= 0 && p < r)
-			--r;
-		if (l == r)
+	while (left < right) {
+		while (comp(*left, *pivot) < 0 && left < pivot)
+			++left;
+		while (comp(*right, *pivot) >= 0 && pivot < right)
+			--right;
+		if (left == right)
 			break;
 
-		swap_str(l, r);
+		swap_str(left, right);
 
-		if (l == p)
-			p = r;
-		else if (r == p)
-			p = l;
+		if (left == pivot)
+			pivot = right;
+		else if (right == pivot)
+			pivot = left;
 	}
 
-	quick_sort_str(array, (size_t)(p - array), 					comp);
-	quick_sort_str(p + 1, (size_t)((array + size) - (p + 1)), 	comp);
+	quick_sort_str(array, 		(size_t)(pivot - array), 				comp);
+	quick_sort_str(pivot + 1, 	(size_t)((array + size) - (pivot + 1)), comp);
 }
 
 void quick_sort_string(string *array, size_t size,
@@ -1458,28 +1458,28 @@ void quick_sort_string(string *array, size_t size,
 		return;
 	}
 
-	string *l = array;
-	string *r = array + size - 1;
-	string *p = array + size / 2;
+	string *left = array;
+	string *right = array + size - 1;
+	string *pivot = array + size / 2;
 
-	while (l < r) {
-		while (comp(l, p) < 0 && l < p)
-			++l;
-		while (comp(r, p) >= 0 && p < r)
-			--r;
-		if (l == r)
+	while (left < right) {
+		while (comp(left, pivot) < 0 && left < pivot)
+			++left;
+		while (comp(right, pivot) >= 0 && pivot < right)
+			--right;
+		if (left == right)
 			break;
 
-		swap_string(l, r);
+		swap_string(left, right);
 
-		if (l == p)
-			p = r;
-		else if (r == p)
-			p = l;
+		if (left == pivot)
+			pivot = right;
+		else if (right == pivot)
+			pivot = left;
 	}
 
-	quick_sort_string(array, (size_t)(p - array), comp);
-	quick_sort_string(p + 1, (size_t)((array + size) - (p + 1)), comp);
+	quick_sort_string(array, 		(size_t)(pivot - array), comp);
+	quick_sort_string(pivot + 1, 	(size_t)((array + size) - (pivot + 1)), comp);
 }
 
 void write_file_str(const char *filename, char **lines, size_t linenum)
@@ -1514,7 +1514,7 @@ void write_file_strings(const char *filename, string *lines, size_t linenum)
 
 void clear_input()
 {
-	int c;
+	int c = 0;
 	while ((c = getchar()) != '\n' && c != EOF) {
 	}
 }
