@@ -9,17 +9,19 @@
 #include <memory.h>
 #include <time.h>
 
+#define GREEN "\033[32;1m"
+
 #ifndef NMEASURE
 #define MEASURE(x)														\
 	{																	\
 		clock_t start = clock();										\
 		x;																\
-		clock_t stop = clock();											\
-		printf("\033[32;1m## MEASURE (%s): %lg ms\033[0m\n", #x,		\
+		clock_t stop  = clock();								    	\
+		printf(GREEN "## MEASURE (%s): %lg ms\033[0m\n", #x,			\
 		       (double)(stop - start) * 1000.0 / CLOCKS_PER_SEC);		\
 	}
 #else
-#define MEASURE(x) x;
+#define MEASURE(x) { x; }
 #endif
 
 #ifndef NDEBUG
@@ -30,12 +32,12 @@
 		exit(4);																			\
 	}
 #else
-#define ASSERT(x) x;
+#define ASSERT(x) ;
 #endif
 
 /*! Функция гарантированного выделения памяти
  * Будет вызван exit, если выделить память не удалось
- * @param [in] size Колличество необходимой памяти в байтах
+ * @param [in] size Количество необходимой памяти в байтах
  * @return Указатель на начало выделенной памяти
  */
 void *xmalloc(size_t size);
@@ -45,13 +47,13 @@ typedef struct stack stack;
 //! Структура стэка
 struct stack {
 	size_t elsize; ///< Размер одного элемента в байтах
-	void *bottom; ///< Указатель на начало памяти стэка
-	void *top; ///< Указатель на верхний элемент стэка
-	size_t size; ///< Размер стэка в байтах
+	void *bottom;  ///< Указатель на начало памяти стэка
+	void *top;     ///< Указатель на верхний элемент стэка
+	size_t size;   ///< Размер стэка в байтах
 };
 
 #define INITIAL_STACK_SIZE (1024) ///< Начальный размер стэка в элементах
-#define STACK_CHUNK_SIZE (1024) ///< Размер блока для расширения в элементах
+#define STACK_CHUNK_SIZE   (1024) ///< Размер блока для расширения в элементах
 
 /*! Функция инициализации стэка
  * @param [in] elsize Размер элемента стэка в байтах
@@ -60,27 +62,27 @@ struct stack {
 stack *stack_init(size_t elsize);
 
 /*! Функция добавления в стэк
- * @param [in] s Указатель на структуру стэка
- * @param [in] p Указатель на добавляемый элемент
+ * @param [in] stackp Указатель на структуру стэка
+ * @param [in] datap Указатель на добавляемый элемент
  */
-void stack_push(stack *s, void *p);
+void stack_push(stack *stackp, void *datap);
 
 /*! Функция взятия из стэка
- * @param [in] s Указатель на структуру стэка
- * @param [out] p Указатель на возвращаемый элемент
+ * @param [in] stackp Указатель на структуру стэка
+ * @param [out] datap Указатель на возвращаемый элемент
  */
-void stack_pop(stack *s, void *p);
+void stack_pop(stack *stackp, void *datap);
 
 /*! Функция деинициализации стэка
- * @param [in] s Указатель на структуру стэка
+ * @param [in] stackp Указатель на структуру стэка
  */
-void stack_deinit(stack *s);
+void stack_deinit(stack *stackp);
 
 /*! Функция выяснения, пустой ли стэк
- * @param [in] s Указатель на структуру стэка
+ * @param [in] stackp Указатель на структуру стэка
  * @return 1 если стэк пуст, 0 иначе
  */
-char stack_is_empty(stack *s);
+char stack_is_empty(stack *stackp);
 
 /*! Функция обмена значениями двух элементов
  * @param [in] a Указатель на первый элемент
@@ -88,7 +90,7 @@ char stack_is_empty(stack *s);
  * @param [in] t Указатель на буфер
  * @param [in] s Размер элементов в байтах
  */
-void swap(void *a, void *b, void *t, size_t s);
+void swap(void *a, void *b, void *buf, size_t size);
 
 /*! Функция сортировки (Быстрая сортировка)
  * @param [in] arr Указатель на массив
@@ -1150,9 +1152,8 @@ int is_capitalc(const char c)
 
 char to_lowerc(const char c)
 {
-	if (is_capitalc(c))
-		return (c - TOLOWER_OFFSET);
-	return c;
+	return (is_capitalc(c)) ? (c - TOLOWER_OFFSET) : c;
+	
 }
 
 int str_compare(const char *str1, const char *str2)
@@ -1440,8 +1441,8 @@ void quick_sort_str(char **array, size_t size,
 			p = l;
 	}
 
-	quick_sort_str(array, (size_t)(p - array), comp);
-	quick_sort_str(p + 1, (size_t)((array + size) - (p + 1)), comp);
+	quick_sort_str(array, (size_t)(p - array), 					comp);
+	quick_sort_str(p + 1, (size_t)((array + size) - (p + 1)), 	comp);
 }
 
 void quick_sort_string(string *array, size_t size,
@@ -1572,54 +1573,54 @@ stack *stack_init(size_t elsize)
 	return retval;
 }
 
-void stack_push(stack *s, void *p)
+void stack_push(stack *stackp, void *datap)
 {
-	ASSERT(s != NULL);
-	ASSERT(p != NULL);
+	ASSERT(stackp != NULL);
+	ASSERT(datap != NULL);
 
-	if (s->size == (size_t)(s->top - s->bottom)) {
-		size_t nsize = s->size + STACK_CHUNK_SIZE * s->elsize;
-		s->bottom = realloc(s->bottom, nsize);
-		s->top = s->bottom + s->size;
-		s->size = nsize;
+	if (stackp->size == (size_t)(stackp->top - stackp->bottom)) {
+		size_t nsize = stackp->size + STACK_CHUNK_SIZE * stackp->elsize;
+		stackp->bottom = realloc(stackp->bottom, nsize);
+		stackp->top = stackp->bottom + stackp->size;
+		stackp->size = nsize;
 	}
-	memcpy(s->top, p, s->elsize);
-	s->top += s->elsize;
+	memcpy(stackp->top, datap, stackp->elsize);
+	stackp->top += stackp->elsize;
 }
 
-void stack_pop(stack *s, void *p)
+void stack_pop(stack *stackp, void *datap)
 {
-	ASSERT(s != NULL);
-	ASSERT(p != NULL);
+	ASSERT(stackp != NULL);
+	ASSERT(datap != NULL);
 
-	s->top -= s->elsize;
-	memcpy(p, s->top, s->elsize);
+	stackp->top -= stackp->elsize;
+	memcpy(datap, stackp->top, stackp->elsize);
 }
 
-void stack_deinit(stack *s)
+void stack_deinit(stack *stackp)
 {
-	ASSERT(s != NULL);
+	ASSERT(stackp != NULL);
 
-	free(s->bottom);
-	free(s);
+	free(stackp->bottom);
+	free(stackp);
 }
 
-char stack_is_empty(stack *s)
+char stack_is_empty(stack *stackp)
 {
-	ASSERT(s != NULL);
+	ASSERT(stackp != NULL);
 
-	return (s->top == s->bottom);
+	return (stackp->top == stackp->bottom);
 }
 
-void swap(void *a, void *b, void *t, size_t s)
+void swap(void *a, void *b, void *buf, size_t size)
 {
 	ASSERT(a != NULL);
 	ASSERT(b != NULL);
-	ASSERT(t != NULL);
+	ASSERT(buf != NULL);
 
-	memcpy(t, a, s);
-	memcpy(a, b, s);
-	memcpy(b, t, s);
+	memcpy(buf, a, size);
+	memcpy(a, b, size);
+	memcpy(b, buf, size);
 }
 
 void q_sort(void *arr, size_t n, size_t size,
