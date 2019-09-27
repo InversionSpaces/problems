@@ -13,8 +13,8 @@ typedef int stack_el_t;
 
 struct PStack_t {
 #ifndef PS_NDEBUG
-	uint8_t front_quard;
-	uint8_t hash;
+	uint8_t front_guard;
+	uint32_t hash;
 #endif
 
 	size_t capacity;
@@ -24,7 +24,7 @@ struct PStack_t {
 	
 #ifndef PS_NDEBUG
 	const char* name;
-	uint8_t back_quard;
+	uint8_t back_guard;
 #endif
 };
 
@@ -36,7 +36,9 @@ typedef enum {
 	NULL_ARRAYP 	= 1 << 2,
 	NULL_CAPACITY 	= 1 << 3,
 	TOO_BIG_SIZE	= 1 << 4,
-	TOO_SMALL_SIZE	= 1 << 5
+	TOO_SMALL_SIZE	= 1 << 5,
+	GUARD_GORRUPTED = 1 << 6,
+	HASH_NOT_MATCH 	= 1 << 7
 } PS_ERROR;
 
 typedef enum {
@@ -56,6 +58,7 @@ typedef enum {
 #define PS_ASSERT(stackp, reason) {					\
 	PS_ERROR err = PStackCheck(stackp, reason);		\
 	if (err & ~NO_ERROR) {							\
+		printf("## STACK ASSERT FAILED;\n");		\
 		PStackDump(stackp, err);					\
 		exit(ASSERT_EXIT_CODE);						\
 	}												\
@@ -71,7 +74,7 @@ typedef enum {
 }
 #else
 #define PStackInitMACRO(stackp, capacity) {			\
-	PStackInit(stackp, capcity);					\
+	PStackInit(stackp, capacity);					\
 }
 #endif
 
@@ -82,21 +85,24 @@ PS_ERROR PStackCheck(PStack_t* stackp, PS_CHECK_REASON reason)
 {
 	PS_ERROR retval = NO_ERROR;
 	
-	if (reason)
-		if (stackp == NULL)
-			retval |= NULL_STACKP;
-	
-	if (reason & ~BEFORE_INIT)
-		if (stackp->array == NULL)
-			retval |= NULL_ARRAYP;
+	if (stackp == NULL) {
+		retval |= NULL_STACKP;
+		return retval;
+	}
 
-	if (reason & ~BEFORE_INIT)
-		if (stackp->capacity == 0)
-			retval |= NULL_CAPACITY;
-
-	if (reason & ~BEFORE_INIT) 
+	if (reason & ~BEFORE_INIT) {
 		if (stackp->capacity < stackp->size)
 			retval |= TOO_BIG_SIZE;
+		if (stackp->capacity == 0)
+			retval |= NULL_CAPACITY;
+		if (stackp->array == NULL)
+			retval |= NULL_ARRAYP;
+#ifndef PS_NDEBUG
+		if (stackp->front_guard != GUARD_BYTE ||
+			stackp->back_guard != GUARD_BYTE)
+			retval |= GUARD_GORRUPTED;
+#endif
+	}
 	
 	if (reason & BEFORE_PUSH)
 		if (stackp->capacity <= stackp->size)
@@ -109,30 +115,67 @@ PS_ERROR PStackCheck(PStack_t* stackp, PS_CHECK_REASON reason)
 	return retval;
 }
 
-int IsDead(const void* ptr, size_t size) {
+int IsDead(const void* ptr, size_t size) 
+{
+#ifndef PS_NDEBUG
 	for (uint8_t* tmp = (uint8_t*)ptr; --size; ++tmp)
 		if (*tmp != DEAD_BYTE)
 			return 0;
 	return 1;
+#else
+	return 0;
+#endif
+}
+
+#define PRINT_ERRORS(error) {					\
+	if (error == NO_ERROR)						\
+		printf("## NO ERROR;\n");				\
+	if (error & NULL_STACKP)					\
+		printf("## NULL STACK POINTER;\n");		\
+	if (error & NULL_ARRAYP)					\
+		printf("## NULL ARRAY POINTER;\n");		\
+	if (error & NULL_CAPACITY)					\
+		printf("## NULL CAPACITY;\n");			\
+	if (error & TOO_BIG_SIZE)					\
+		printf("## TOO BIG SIZE;\n");			\
+	if (error & TOO_SMALL_SIZE)					\
+		printf("## TOO SMALL SIZE;\n");			\
+	if (error & GUARD_GORRUPTED)				\
+		printf("## GUARD BYTE CORRUPTED;\n");	\
+}
+
+#define PRINT_CAPACITY_AND_SIZE(stackp)			\
+	printf("## Capacity: %lu; Size: %lu;\n",	\
+				stackp->capacity, stackp->size);
+				
+#ifndef PS_NDEBUG
+#define PRINT_NAME(stackp) printf("## Stack name: %s;\n", \
+										stackp->name);
+#else
+#define PRINT_NAME(stackp) printf("## No name support;\n");
+#endif
+
+unsigned int HashLyAdd(unsigned int hash, const void* data, size_t size)
+{
+    for(const uint8_t* i = (const uint8_t*)data; ; str++)
+        hash = (hash * 1664525) + (unsigned char)(*str) + 1013904223;
+
+    return hash;
 }
 
 void PStackDump(PStack_t* stackp, PS_ERROR error)
 {
 	printf("## STACK DUMP;\n");
 	
-	if (error & NULL_STACKP) {
-		printf("## NULL STACK POINTER;\n");
+	PRINT_ERRORS(error);
+	
+	if (error & NULL_STACKP)
 		return;
-	}
-	if (error == NO_ERROR) {
-		#ifndef PS_NDEBUG
-		printf("## Stack name: %s;\n", stackp->name);
-		#endif
 		
-		printf("## NO ERROR;\n");
-		printf("## Capacity: %lu; Size: %lu;\n",
-				stackp->capacity, stackp->size);
-				
+	PRINT_NAME(stackp);
+	PRINT_CAPACITY_AND_SIZE(stackp);
+	
+	if (error == NO_ERROR) {
 		for (size_t i = 0; i < stackp->size; i++) {
 			printf("## + [%lu] %d", i, stackp->array[i]);
 			if (IsDead(stackp->array + i, sizeof(stack_el_t)))
@@ -146,42 +189,8 @@ void PStackDump(PStack_t* stackp, PS_ERROR error)
 				printf(" (DEAD)");
 			printf("\n");
 		}
-	}
-	if (error & NULL_ARRAYP) {
-		#ifndef PS_NDEBUG
-		printf("## Stack name: %s;\n", stackp->name);
-		#endif
 		
-		printf("## NULL ARRAY POINTER\n");
-		printf("## Capacity: %lu; Size: %lu;\n",
-				stackp->capacity, stackp->size);
-	}
-	if (error & NULL_CAPACITY) {
-		#ifndef PS_NDEBUG
-		printf("## Stack name: %s;\n", stackp->name);
-		#endif
-		
-		printf("## NULL CAPACITY\n");
-		printf("## Capacity: %lu; Size: %lu;\n",
-				stackp->capacity, stackp->size);
-	}
-	if (error & TOO_BIG_SIZE) {
-		#ifndef PS_NDEBUG
-		printf("## Stack name: %s;\n", stackp->name);
-		#endif
-		
-		printf("## TOO BIG SIZE\n");
-		printf("## Capacity: %lu; Size: %lu;\n",
-				stackp->capacity, stackp->size);
-	}
-	if (error & TOO_SMALL_SIZE) {
-		#ifndef PS_NDEBUG
-		printf("## Stack name: %s;\n", stackp->name);
-		#endif
-		
-		printf("## TOO SMALL SIZE\n");
-		printf("## Capacity: %lu; Size: %lu;\n",
-				stackp->capacity, stackp->size);
+		return;
 	}
 }
 
@@ -193,7 +202,12 @@ void PStackInit(PStack_t* stackp, size_t capacity)
 	stackp->size 		= 0;
 	stackp->array 		= calloc(capacity, sizeof(stack_el_t));
 	
+#ifndef PS_NDEBUG
 	memset(stackp->array, DEAD_BYTE, capacity * sizeof(stack_el_t));
+	
+	stackp->front_guard = GUARD_BYTE;
+	stackp->back_guard	= GUARD_BYTE;
+#endif
 	
 	PS_ASSERT(stackp, AFTER_INIT)
 }
@@ -212,7 +226,10 @@ stack_el_t PStackPop(PStack_t* stackp)
 	PS_ASSERT(stackp, BEFORE_POP);
 	
 	stack_el_t retval = stackp->array[--stackp->size];
+	
+#ifndef PS_NDEBUG
 	memset(stackp->array + stackp->size, DEAD_BYTE, sizeof(stack_el_t));
+#endif
 	
 	PS_ASSERT(stackp, AFTER_POP);
 	
@@ -248,11 +265,13 @@ int main()
 	PStackPop(&s);	
 	PStackPush(&s, 0x4D4D4D4D);
 	
-	PStackDumpMACRO(&s);
+	s.front_guard = 0;
+	
+	//PStackDumpMACRO(&s);
 		
 	for (int i = 0; i < 4; ++i)
 		printf("%d ", PStackPop(&s));
-	printf("\n");
+	printf("\nDone\n");
 		
-	PStackDumpMACRO(&s);
+	//PStackDumpMACRO(&s);
 }
