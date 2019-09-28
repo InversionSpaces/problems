@@ -56,11 +56,33 @@ typedef enum {
 
 #define ASSERT_EXIT_CODE (2)
 
+#define PRINT_REASON(reason) {						\
+	if (reason == COMMON)							\
+		printf("## COMMON CHECK REASON;\n");		\
+	if (reason == BEFORE_INIT)						\
+		printf("## BEFORE_INIT CHECK REASON;\n");	\
+	if (reason == AFTER_INIT)						\
+		printf("## AFTER_INIT CHECK REASON;\n");	\
+	if (reason == BEFORE_DEINIT)					\
+		printf("## BEFORE_DEINIT CHECK REASON;\n");	\
+	if (reason == BEFORE_PUSH)						\
+		printf("## BEFORE_PUSH CHECK REASON;\n");	\
+	if (reason == AFTER_PUSH)						\
+		printf("## AFTER_PUSH CHECK REASON;\n");	\
+	if (reason == BEFORE_POP)						\
+		printf("## BEFORE_POP CHECK REASON;\n");	\
+	if (reason == AFTER_POP)						\
+		printf("## AFTER_POP CHECK REASON;\n");		\
+	if (reason == BEFORE_HASH)						\
+		printf("## BEFORE_HASH CHECK REASON;\n");	\
+}
+
 #ifndef PS_NDEBUG
 #define PS_ASSERT(stackp, reason) {					\
 	PS_ERROR err = PStackCheck(stackp, reason);		\
 	if (err & ~NO_ERROR) {							\
 		printf("## STACK ASSERT FAILED;\n");		\
+		PRINT_REASON(reason)						\
 		printf("## IN FUNCTION %s;\n", __func__);	\
 		PStackDump(stackp, err);					\
 		exit(ASSERT_EXIT_CODE);						\
