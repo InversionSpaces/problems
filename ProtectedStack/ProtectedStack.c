@@ -61,6 +61,7 @@ typedef enum {
 	PS_ERROR err = PStackCheck(stackp, reason);		\
 	if (err & ~NO_ERROR) {							\
 		printf("## STACK ASSERT FAILED;\n");		\
+		printf("## IN FUNCTION %s;\n", __func__);	\
 		PStackDump(stackp, err);					\
 		exit(ASSERT_EXIT_CODE);						\
 	}												\
@@ -227,7 +228,7 @@ int main()
 	PStack_t s = {};
 	PStackInitMACRO(&s, 15);
 	
-	for (int i = 0; i < 4; ++i)
+	for (int i = 0; i < 40; ++i)
 		PStackPush(&s, i);
 		
 	PStackPop(&s);	
@@ -290,8 +291,6 @@ uint32_t PStackCalcHash(PStack_t* stackp)
 PS_ERROR PStackCheck(PStack_t* stackp, PS_CHECK_REASON reason)
 {
 	PS_ERROR retval = NO_ERROR;
-	
-	//printf("In check error %u\n", retval);
 	
 	if (stackp == NULL) {
 		retval |= NULL_STACKP;
