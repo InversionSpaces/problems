@@ -97,7 +97,7 @@ typedef enum {
 	PStackInit(stackp, capacity);					\
 	(stackp)->name = #stackp;						\
 	(stackp)->hash = PStackCalcHash(stackp);		\
-}
+} // Не очень красиов - два раза хэш считаем
 #else
 #define PStackInitMACRO(stackp, capacity) {			\
 	PStackInit(stackp, capacity);					\
@@ -199,14 +199,14 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 }
 
 #define PRINT_CAPACITY_AND_SIZE(stackp)				\
-	printf("## Capacity: %lu;\n## Size: %lu;\n",	\
+	printf("## Capacity:\t%lu;\n## Size:\t%lu;\n",	\
 				stackp->capacity, stackp->size);
 
 #ifndef PS_NDEBUG			
 #define PRINT_GUARDS(stackp)						\
-	printf("## Front guard: %u (Should be %u);\n", 	\
+	printf("## Front guard:\t%u (Should be %u);\n", 	\
 		(stackp)->front_guard, GUARD_BYTE);			\
-	printf("## Back guard: %u (Should be %u);\n", 	\
+	printf("## Back guard:\t%u (Should be %u);\n", 	\
 		(stackp)->back_guard, GUARD_BYTE);
 #else
 #define PRINT_GUARDS(stackp)						\
@@ -215,7 +215,7 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 
 #ifndef PS_NDEBUG
 #define PRINT_HASH(stackp)						\
-	printf("## Hash: %u (Should be %u);\n", 	\
+	printf("## Hash:\t%u (Should be %u);\n", 	\
 		stackp->hash, PStackCalcHash(stackp));
 #else 													
 #define PRINT_HASH(stackp) 						\
@@ -225,13 +225,13 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 #define PRINT_ELEMENTS(stackp) {								\
 	printf("## Elements:\n");									\
 	for (size_t i = 0; i < stackp->size; i++) {					\
-		printf("## + [%lu] %d", i, stackp->array[i]);			\
+		printf("## + [%lu]\t%d", i, stackp->array[i]);			\
 		if (IsDead(stackp->array + i, sizeof(stack_el_t)))		\
 			printf(" (POSSIBLY DEAD)");							\
 		printf("\n");											\
 	}															\
 	for (size_t i = stackp->size; i < stackp->capacity; i++) {	\
-		printf("## - [%lu] %d", i, stackp->array[i]);			\
+		printf("## - [%lu]\t%d", i, stackp->array[i]);			\
 		if (IsDead(stackp->array + i, sizeof(stack_el_t)))		\
 			printf(" (DEAD)");									\
 		printf("\n");											\
@@ -239,7 +239,7 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 }
 				
 #ifndef PS_NDEBUG
-#define PRINT_NAME(stackp) printf("## Stack name: %s;\n", \
+#define PRINT_NAME(stackp) printf("## Stack name:\t%s;\n", \
 										stackp->name);
 #else
 #define PRINT_NAME(stackp) printf("## No name support;\n");
