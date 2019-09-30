@@ -154,6 +154,14 @@ void HashLyAdd(uint32_t* hash, const void* data, size_t size)
  */
 int IsDead(const void* ptr, size_t size);
 
+/*! Функция проверки данных на то, являются ли они защитными
+ * @param [in] ptr Указатель на данные
+ * @param [in] size Размер данных
+ * @return 1, если они защитные, 0 - иначе
+ * @note Если существует PS_NDEBUG, все данные считаются защитными
+ */
+int IsGuard(const void* ptr, size_t size);
+
 /*! Функция инициализации стэка
  * @param [in, out] stackp Указатель на стэк
  * @param [in] capacity Максимальный размер стэка в элементах
