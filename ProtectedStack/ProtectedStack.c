@@ -10,11 +10,17 @@
 #define GUARD_BYTE (0xBA)
 #endif
 
+#ifndef PS_NDEBUG
+#define ARRAY_OFFSET (10)
+#else
+#define ARRAY_OFFSET (0)
+#endif
+
 typedef int stack_el_t;
 
 struct PStack_t {
 #ifndef PS_NDEBUG
-	uint8_t front_guard;
+	uint8_t front_guard[ARRAY_OFFSET];
 	uint32_t hash;
 #endif
 
@@ -25,7 +31,7 @@ struct PStack_t {
 	
 #ifndef PS_NDEBUG
 	const char* name;
-	uint8_t back_guard;
+	uint8_t back_guard[ARRAY_OFFSET];
 #endif
 };
 
@@ -97,7 +103,7 @@ typedef enum {
 	PStackInit(stackp, capacity);					\
 	(stackp)->name = #stackp;						\
 	(stackp)->hash = PStackCalcHash(stackp);		\
-} // Не очень красиов - два раза хэш считаем
+} // Не очень красиво - два раза хэш считаем
 #else
 #define PStackInitMACRO(stackp, capacity) {			\
 	PStackInit(stackp, capacity);					\
@@ -203,14 +209,34 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 				stackp->capacity, stackp->size);
 
 #ifndef PS_NDEBUG			
-#define PRINT_GUARDS(stackp)						\
-	printf("## Front guard:\t%u (Should be %u);\n", 	\
-		(stackp)->front_guard, GUARD_BYTE);			\
-	printf("## Back guard:\t%u (Should be %u);\n", 	\
-		(stackp)->back_guard, GUARD_BYTE);
+#define PRINT_STRUCT_GUARDS(stackp)								\
+	printf("## Struct guards (should all be |%x|):", GUARD_BYTE);	\
+	printf("\n## Front guards:\t");								\
+	for (size_t i = 0; i < ARRAY_OFFSET; ++i)					\
+		printf("|%x|", stackp->front_guard[i]);					\
+	printf("\n## Back guards:\t\t");								\
+	for (size_t i = 0; i < ARRAY_OFFSET; ++i)					\
+		printf("|%x|", stackp->front_guard[i]);					\
+	printf("\n");
 #else
-#define PRINT_GUARDS(stackp)						\
-	printf("## No guards support\n");
+#define PRINT_STRUCT_GUARDS(stackp)								\
+	printf("## No struct guards support\n");
+#endif
+
+#ifndef PS_NDEBUG
+#define PRINT_ARRAY_GUARDS(stackp)	{										\
+	printf("## Array guards (should all be |%x|):", GUARD_BYTE);			\
+	printf("\n## Front guards:\t");											\
+	for (size_t i = 0; i < ARRAY_OFFSET; ++i)								\
+		printf("|%x|", (((uint8_t*)stackp->array) - ARRAY_OFFSET)[i]);		\
+	printf("\n## Back guards:\t\t");										\
+	for (size_t i = 0; i < ARRAY_OFFSET; ++i)								\
+		printf("|%x|", ((uint8_t*)(stackp->array + stackp->capacity))[i]);	\
+	printf("\n");															\
+}
+#else
+#define PRINT_ARRAY_GUARDS(stackp)								\
+	printf("## No array guards support\n");
 #endif
 
 #ifndef PS_NDEBUG
@@ -247,32 +273,49 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 
 int main()
 {	
-	PStack_t s = {};
+	PStack_t s = {};	
 	PStackInitMACRO(&s, 15);
 	
-	for (int i = 0; i < 40; ++i)
+	printf("Inited %s\n", s.name);
+	
+	printf("Before push\n");
+	for (int i = 0; i < 10; ++i)
 		PStackPush(&s, i);
+	printf("After push\n");
 		
 	PStackPop(&s);	
 	PStackPush(&s, 0x4D4D4D4D);
 	
-	s.array[10] = 100;
+	uint8_t* hack = ((uint8_t*)(s.array)) - 1;
+	//*hack = 0; 
 	
 	//s.back_guard = 0;
 	
 	//PStackDumpMACRO(&s);
 		
 	for (int i = 0; i < 4; ++i)
-		printf("%d ", PStackPop(&s));
+		PStackPop(&s);
 	printf("\nDone\n");
 		
-	//PStackDumpMACRO(&s);
+	PStackDumpMACRO(&s);
+}
+
+int IsGuard(const void* ptr, size_t size)
+{
+#ifndef PS_NDEBUG
+	for (uint8_t* tmp = (uint8_t*)ptr; size--; ++tmp)
+		if (*tmp != GUARD_BYTE)
+			return 0;
+	return 1;
+#else
+	return 1;
+#endif
 }
 
 int IsDead(const void* ptr, size_t size) 
 {
 #ifndef PS_NDEBUG
-	for (uint8_t* tmp = (uint8_t*)ptr; --size; ++tmp)
+	for (uint8_t* tmp = (uint8_t*)ptr; size--; ++tmp)
 		if (*tmp != DEAD_BYTE)
 			return 0;
 	return 1;
@@ -288,12 +331,6 @@ uint32_t PStackCalcHash(PStack_t* stackp)
 	uint32_t retval = 0;
 
 #ifndef PS_NDEBUG	
-	HashLyAdd(&retval, &stackp->front_guard, 
-		sizeof(stackp->front_guard));
-		
-	HashLyAdd(&retval, &stackp->back_guard, 
-		sizeof(stackp->back_guard));
-		
 	HashLyAdd(&retval, stackp->name, 
 		strlen(stackp->name));
 #endif
@@ -328,10 +365,18 @@ PS_ERROR PStackCheck(PStack_t* stackp, PS_CHECK_REASON reason)
 			
 		if (stackp->array == NULL)
 			retval |= NULL_ARRAYP;
-			
 #ifndef PS_NDEBUG
-		if (stackp->front_guard != GUARD_BYTE ||
-			stackp->back_guard != GUARD_BYTE)
+		else {
+			uint8_t* start 	= (uint8_t*)(stackp->array) - ARRAY_OFFSET;
+			uint8_t* end	= (uint8_t*)(stackp->array + stackp->capacity);
+			
+			if (!IsGuard(start, ARRAY_OFFSET) ||
+				!IsGuard(end,	ARRAY_OFFSET))
+				retval |= GUARD_GORRUPTED;
+		}
+		
+		if (!IsGuard(stackp->front_guard, 	ARRAY_OFFSET) ||
+			!IsGuard(stackp->back_guard,	ARRAY_OFFSET))
 			retval |= GUARD_GORRUPTED;
 			
 		if (reason & ~BEFORE_HASH)
@@ -357,16 +402,23 @@ void PStackDump(PStack_t* stackp, PS_ERROR error)
 
 	PRINT_ERRORS(error)
 	
+	// Иначе нет смысла что-то писать
 	if (error & NULL_STACKP)
 		return;
 		
 	PRINT_NAME(stackp)
 	PRINT_CAPACITY_AND_SIZE(stackp)
-	PRINT_GUARDS(stackp)
-	PRINT_HASH(stackp)
+	PRINT_STRUCT_GUARDS(stackp)
 	
-	if (!(error & (NULL_ARRAYP | TOO_BIG_SIZE | TOO_SMALL_SIZE)))
+	// Иначе в рекурсию войдём
+	if (!(error & ~(HASH_NOT_MATCH | NO_ERROR))) 
+		PRINT_HASH(stackp)
+	
+	// Иначе не знаешь, сколько выписывать
+	if (!(error & (NULL_ARRAYP | TOO_BIG_SIZE | TOO_SMALL_SIZE))) {
 		PRINT_ELEMENTS(stackp)
+		PRINT_ARRAY_GUARDS(stackp)
+	}
 }
 
 void PStackInit(PStack_t* stackp, size_t capacity)
@@ -375,13 +427,22 @@ void PStackInit(PStack_t* stackp, size_t capacity)
 	
 	stackp->capacity 	= capacity;
 	stackp->size 		= 0;
-	stackp->array 		= calloc(capacity, sizeof(stack_el_t));
+	
+	size_t elem_size 	= capacity * sizeof(stack_el_t);
+	size_t full_size 	= elem_size + 2 * ARRAY_OFFSET;
+	stackp->array 		= malloc(full_size);
 	
 #ifndef PS_NDEBUG
-	memset(stackp->array, DEAD_BYTE, capacity * sizeof(stack_el_t));
+	uint8_t* start 	= (uint8_t*)(stackp->array);
+	stackp->array 	= (stack_el_t*)(start + ARRAY_OFFSET);
+	uint8_t* end	= (uint8_t*)(start + ARRAY_OFFSET + elem_size);
+
+	memset(start, 			GUARD_BYTE, ARRAY_OFFSET);
+	memset(stackp->array, 	DEAD_BYTE, 	elem_size);
+	memset(end, 			GUARD_BYTE, ARRAY_OFFSET);
 	
-	stackp->front_guard = GUARD_BYTE;
-	stackp->back_guard	= GUARD_BYTE;
+	memset(stackp->front_guard, GUARD_BYTE, ARRAY_OFFSET);
+	memset(stackp->back_guard,	GUARD_BYTE, ARRAY_OFFSET);
 	
 	stackp->name = "[Default stack name]";
 	
@@ -432,7 +493,8 @@ void PStackDeInit(PStack_t* stackp)
 {
 	PS_ASSERT(stackp, BEFORE_DEINIT);
 	
-	free(stackp->array);
+	void* real_ptr = (void*)(stackp->array) - ARRAY_OFFSET;
+	free(real_ptr);
 	
 	stackp->size 		= 0;
 	stackp->capacity 	= 0;
