@@ -5,38 +5,51 @@
 #include <inttypes.h>
 #include <string.h>
 
+// "Мёртвый" и "защитный" байты
 #ifndef PS_NDEBUG
 #define DEAD_BYTE (0x4D)
 #define GUARD_BYTE (0xBA)
 #endif
 
+// Размер канареек у структуры стэка и его массива в байтах
 #ifndef PS_NDEBUG
-#define ARRAY_OFFSET (10)
+#define ARRAY_OFFSET (200) 
 #else
 #define ARRAY_OFFSET (0)
 #endif
 
+// typedef типа элемента стэка
 typedef int stack_el_t;
 
+// Структура стэка
 struct PStack_t {
 #ifndef PS_NDEBUG
+	// Передняя "защитная" зона
 	uint8_t front_guard[ARRAY_OFFSET];
+	// Хэш
 	uint32_t hash;
 #endif
-
+	
+	// Максимальный размер стэка в элементах
 	size_t capacity;
+	// Текущий размер стэка в элементах
 	size_t size;
 	
+	// Динамический внутренний массив
 	stack_el_t* array;
 	
 #ifndef PS_NDEBUG
+	// Имя переменной стэка
 	const char* name;
+	// Задняя "защитная" зона
 	uint8_t back_guard[ARRAY_OFFSET];
 #endif
 };
 
+// Объявляем тип
 typedef struct PStack_t PStack_t;
 
+// Возможные ошибки
 typedef enum {
 	NO_ERROR 		= 1,
 	NULL_STACKP		= 1 << 1,
@@ -48,6 +61,7 @@ typedef enum {
 	HASH_NOT_MATCH 	= 1 << 7
 } PS_ERROR;
 
+// Возможные причины проверки стэка
 typedef enum {
 	COMMON			= 1,
 	BEFORE_INIT		= 1 << 1,
@@ -60,8 +74,10 @@ typedef enum {
 	BEFORE_HASH		= 1 << 8
 } PS_CHECK_REASON;
 
+// Код ошибки выхода программы при срабатывании PS_ASSERT
 #define ASSERT_EXIT_CODE (2)
 
+// Напечатать причину проверки
 #define PRINT_REASON(reason) {						\
 	if (reason == COMMON)							\
 		printf("## COMMON CHECK REASON;\n");		\
@@ -83,6 +99,7 @@ typedef enum {
 		printf("## BEFORE_HASH CHECK REASON;\n");	\
 }
 
+// PS_ASSERT проверяет стэк
 #ifndef PS_NDEBUG
 #define PS_ASSERT(stackp, reason) {					\
 	PS_ERROR err = PStackCheck(stackp, reason);		\
@@ -98,6 +115,7 @@ typedef enum {
 #define PS_ASSERT(stackp, reason) ;
 #endif
 
+// Макрос для инициализации стэка - автоматически устанавливает имя
 #ifndef PS_NDEBUG
 #define PStackInitMACRO(stackp, capacity) {			\
 	PStackInit(stackp, capacity);					\
@@ -110,6 +128,7 @@ typedef enum {
 }
 #endif
 
+// Макрос для вызова PStackDump
 #define PStackDumpMACRO(stackp) 					\
 		PStackDump(stackp, PStackCheck(stackp, COMMON));
 
@@ -183,6 +202,7 @@ PS_ERROR PStackCheck(PStack_t* stackp, PS_CHECK_REASON reason);
  */
 void PStackDump(PStack_t* stackp, PS_ERROR error);
 
+// Вывод ошибок
 #define PRINT_ERRORS(error) {					\
 	if (error == NO_ERROR)						\
 		printf("## NO ERROR;\n");				\
@@ -204,10 +224,12 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 		printf("## HASH DOESNT MATCH;\n");		\
 }
 
+// Вывод capacity и size
 #define PRINT_CAPACITY_AND_SIZE(stackp)				\
 	printf("## Capacity:\t%lu;\n## Size:\t%lu;\n",	\
 				stackp->capacity, stackp->size);
 
+// Вывод "защитных" полей структуры
 #ifndef PS_NDEBUG			
 #define PRINT_STRUCT_GUARDS(stackp)								\
 	printf("## Struct guards (should all be |%x|):", GUARD_BYTE);	\
@@ -223,6 +245,7 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 	printf("## No struct guards support\n");
 #endif
 
+// Вывод "защитных" полей массива
 #ifndef PS_NDEBUG
 #define PRINT_ARRAY_GUARDS(stackp)	{										\
 	printf("## Array guards (should all be |%x|):", GUARD_BYTE);			\
@@ -239,6 +262,7 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 	printf("## No array guards support\n");
 #endif
 
+// Вывод хэша
 #ifndef PS_NDEBUG
 #define PRINT_HASH(stackp)						\
 	printf("## Hash:\t%u (Should be %u);\n", 	\
@@ -248,6 +272,7 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 	printf("## No hash support;\n");
 #endif
 
+// Вывод элементов массива
 #define PRINT_ELEMENTS(stackp) {								\
 	printf("## Elements:\n");									\
 	for (size_t i = 0; i < stackp->size; i++) {					\
@@ -263,7 +288,8 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 		printf("\n");											\
 	}															\
 }
-				
+			
+// Вывод имени	
 #ifndef PS_NDEBUG
 #define PRINT_NAME(stackp) printf("## Stack name:\t%s;\n", \
 										stackp->name);
@@ -295,7 +321,7 @@ int main()
 		
 	for (int i = 0; i < 4; ++i)
 		PStackPop(&s);
-	printf("\nDone\n");
+	printf("Done\n");
 		
 	PStackDumpMACRO(&s);
 }
