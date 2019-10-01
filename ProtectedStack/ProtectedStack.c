@@ -319,14 +319,17 @@ int main()
 {	
 	PStack_t s = {};
 	
-	printf("Before init\n");
 	PStackInitMACRO(&s, 16);
 	
-	for (int i = 0; i < 80; ++i)
+	printf("Inited\n");
+	
+	for (int i = 0; i < 31; ++i)
 		PStackPush(&s, i);
 		
 	PStackDumpMACRO(&s);
 }
+
+
 
 int IsGuard(const void* ptr, size_t size)
 {
@@ -496,9 +499,9 @@ void PStackPush(PStack_t* stackp, stack_el_t elem)
 	stackp->hash = PStackCalcHash(stackp);
 #endif
 
-	if (stackp->size == stackp->capacity)
+	if (stackp->size == stackp->capacity) 
 		PStackReserve(stackp, stackp->capacity * 2);
-
+	
 	PS_ASSERT(stackp, AFTER_PUSH);
 }
 
@@ -523,41 +526,45 @@ int PStackReserve(PStack_t* stackp, size_t capacity)
 {
 	PS_ASSERT(stackp, COMMON);
 	
-	size_t elem_size 	= capacity * sizeof(stack_el_t);
-	size_t new_size		= elem_size + 2 * ARRAY_OFFSET;
+	// Размер новой области с данными в байтах
+	size_t data_size = capacity * sizeof(stack_el_t);
+	// Размер всей новой области в байтах
+	size_t new_size	 = data_size + 2 * ARRAY_OFFSET;
 	
+	// Вычисляем настоящий указатель на выделенную память
 	uint8_t* real_ptr 	= ((uint8_t*)stackp->array) - ARRAY_OFFSET;
+	// Реаллоцируем память
 	uint8_t* tmp_ptr 	= realloc(real_ptr, new_size);
 	
 	if (tmp_ptr == NULL)
 		return 0;
 	
-#ifndef PS_NDEBUG
-	uint8_t* start 	= tmp_ptr;
-	uint8_t* end 	= tmp_ptr + ARRAY_OFFSET + elem_size;
+	// Сохраняем старую вместимость
+	size_t old_capacity = stackp->capacity;
 	
-	memset(start, 	GUARD_BYTE, ARRAY_OFFSET);
-	memset(end,		GUARD_BYTE, ARRAY_OFFSET);
-#endif
-	
-	stack_el_t* new_array 	= (stack_el_t*)(tmp_ptr + ARRAY_OFFSET);
-	stack_el_t* new_end 	= new_array;
-	
-	for (; 	new_end < new_array + stackp->size; 
-			++new_end, ++stackp->array) 
-		*new_end = *stackp->array;
-		
-	stackp->array 		= new_array;
-	stackp->capacity 	= capacity;
+	// Обновляем поля стэка
+	stackp->array = (stack_el_t*)(tmp_ptr + ARRAY_OFFSET);
+	stackp->capacity = capacity;
 	
 #ifndef PS_NDEBUG
-	size_t dead_size = (capacity - (new_end - new_array));
-	dead_size *= sizeof(stack_el_t);
+	// Начало защитной области памяти сзади
+	uint8_t* guard_start = ((uint8_t*)stackp->array) + data_size;
 	
-	memset(new_end, DEAD_BYTE, dead_size);
-#endif
+	// Заполняем эту область
+	memset(guard_start, GUARD_BYTE, ARRAY_OFFSET);
 	
+	// Окончание области данных в старой памяти
+	uint8_t* data_end = (uint8_t*)(stackp->array + old_capacity);
+	
+	// Размер области, которую надо заполнить "мёртвыми" байтами
+	size_t dead_size = guard_start - data_end;
+	
+	// Заполняем эту область
+	memset(data_end, DEAD_BYTE, dead_size);
+	
+	// Пересчитываем хэш
 	stackp->hash = PStackCalcHash(stackp);
+#endif
 	
 	PS_ASSERT(stackp, COMMON);
 	
@@ -575,9 +582,11 @@ void PStackDeInit(PStack_t* stackp)
 {
 	PS_ASSERT(stackp, BEFORE_DEINIT);
 	
-	void* real_ptr = (void*)(stackp->array) - ARRAY_OFFSET;
+	// Вычисляем настоящий указатель на выделенную память
+	uint8_t* real_ptr = ((uint8_t*)stackp->array) - ARRAY_OFFSET;
 	free(real_ptr);
 	
+	// Зануляем переменные
 	stackp->size 		= 0;
 	stackp->capacity 	= 0;
 	stackp->array		= NULL;
