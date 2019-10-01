@@ -13,7 +13,7 @@
 
 // Размер канареек у структуры стэка и его массива в байтах
 #ifndef PS_NDEBUG
-#define ARRAY_OFFSET (200) 
+#define ARRAY_OFFSET (5) 
 #else
 #define ARRAY_OFFSET (0)
 #endif
@@ -239,14 +239,16 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 
 // Вывод "защитных" полей структуры
 #ifndef PS_NDEBUG			
-#define PRINT_STRUCT_GUARDS(stackp)								\
+#define PRINT_STRUCT_GUARDS(stackp)									\
 	printf("## Struct guards (should all be |%x|):", GUARD_BYTE);	\
-	printf("\n## Front guards:\t");								\
-	for (size_t i = 0; i < ARRAY_OFFSET; ++i)					\
-		printf("|%x|", stackp->front_guard[i]);					\
+	printf("\n## Front guards:\t");									\
+	uint8_t* ptr = stackp->front_guard;								\
+	for (uint8_t* i = ptr; i < ptr + ARRAY_OFFSET; ++i)				\
+		printf("|%x|", *i);											\
 	printf("\n## Back guards:\t\t");								\
-	for (size_t i = 0; i < ARRAY_OFFSET; ++i)					\
-		printf("|%x|", stackp->front_guard[i]);					\
+	ptr = stackp->back_guard;										\
+	for (uint8_t* i = ptr; i < ptr + ARRAY_OFFSET; ++i)				\
+		printf("|%x|", *i);											\
 	printf("\n");
 #else
 #define PRINT_STRUCT_GUARDS(stackp)								\
@@ -255,15 +257,17 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 
 // Вывод "защитных" полей массива
 #ifndef PS_NDEBUG
-#define PRINT_ARRAY_GUARDS(stackp)	{										\
-	printf("## Array guards (should all be |%x|):", GUARD_BYTE);			\
-	printf("\n## Front guards:\t");											\
-	for (size_t i = 0; i < ARRAY_OFFSET; ++i)								\
-		printf("|%x|", (((uint8_t*)stackp->array) - ARRAY_OFFSET)[i]);		\
-	printf("\n## Back guards:\t\t");										\
-	for (size_t i = 0; i < ARRAY_OFFSET; ++i)								\
-		printf("|%x|", ((uint8_t*)(stackp->array + stackp->capacity))[i]);	\
-	printf("\n");															\
+#define PRINT_ARRAY_GUARDS(stackp)	{								\
+	printf("## Array guards (should all be |%x|):", GUARD_BYTE);	\
+	printf("\n## Front guards:\t");									\
+	uint8_t* ptr = ((uint8_t*)stackp->array) - ARRAY_OFFSET;		\
+	for (uint8_t* i = ptr; i < ptr + ARRAY_OFFSET; ++i)				\
+		printf("|%x|", *i);											\
+	printf("\n## Back guards:\t\t");								\
+	ptr = (uint8_t*)(stackp->array + stackp->capacity);				\
+	for (uint8_t* i = ptr; i < ptr + ARRAY_OFFSET; ++i)				\
+		printf("|%x|", *i);											\
+	printf("\n");													\
 }
 #else
 #define PRINT_ARRAY_GUARDS(stackp)								\
@@ -310,7 +314,7 @@ int main()
 	PStack_t s = {};	
 	PStackInitMACRO(&s, 15);
 	
-	printf("Inited %s\n", s.name);
+	//printf("Inited %s\n", s.name);
 	
 	printf("Before push\n");
 	for (int i = 0; i < 10; ++i)
