@@ -323,13 +323,11 @@ int main()
 	
 	printf("Inited\n");
 	
-	for (int i = 0; i < 31; ++i)
+	for (int i = 0; i < 500; ++i)
 		PStackPush(&s, i);
 		
 	PStackDumpMACRO(&s);
 }
-
-
 
 int IsGuard(const void* ptr, size_t size)
 {
@@ -464,20 +462,31 @@ void PStackInit(PStack_t* stackp, size_t capacity)
 	stackp->capacity 	= capacity;
 	stackp->size 		= 0;
 	
+	// Размер области памяти с данными
 	size_t elem_size = capacity * sizeof(stack_el_t);
+	
+	// Размер всей области памяти
 	size_t full_size = elem_size + 2 * ARRAY_OFFSET;
 	
+	// Аллоцируем память
 	uint8_t* tmp_ptr 	= malloc(full_size);
+	
+	// Присваиваем указатель на данные
 	stackp->array 		= (stack_el_t*)(tmp_ptr + ARRAY_OFFSET);
 		
 #ifndef PS_NDEBUG
+	// Начало "защитной" области памяти спереди
 	uint8_t* start 	= tmp_ptr;
+	
+	// Начало "защитной" области памяти сзади
 	uint8_t* end	= tmp_ptr + ARRAY_OFFSET + elem_size;
 
+	// Заполняем области соответственно
 	memset(start, 			GUARD_BYTE, ARRAY_OFFSET);
 	memset(stackp->array, 	DEAD_BYTE, 	elem_size);
 	memset(end, 			GUARD_BYTE, ARRAY_OFFSET);
 	
+	// Заполняем защитные области структуры
 	memset(stackp->front_guard, GUARD_BYTE, ARRAY_OFFSET);
 	memset(stackp->back_guard,  GUARD_BYTE, ARRAY_OFFSET);
 	
@@ -512,7 +521,8 @@ stack_el_t PStackPop(PStack_t* stackp)
 	stack_el_t retval = stackp->array[--stackp->size];
 	
 #ifndef PS_NDEBUG
-	memset(stackp->array + stackp->size, DEAD_BYTE, sizeof(stack_el_t));
+	stack_el_t* el_ptr = stackp->array + stackp->size;
+	memset(el_ptr, DEAD_BYTE, sizeof(stack_el_t));
 
 	stackp->hash = PStackCalcHash(stackp);
 #endif
@@ -523,8 +533,11 @@ stack_el_t PStackPop(PStack_t* stackp)
 }
 
 int PStackReserve(PStack_t* stackp, size_t capacity)
-{
+{	
 	PS_ASSERT(stackp, COMMON);
+
+	// Сужение пока не поддерживается
+	assert(stackp->capacity < capacity);
 	
 	// Размер новой области с данными в байтах
 	size_t data_size = capacity * sizeof(stack_el_t);
