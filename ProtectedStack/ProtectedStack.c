@@ -180,6 +180,12 @@ void PStackPush(PStack_t* stackp, stack_el_t elem);
  */
 stack_el_t PStackPop(PStack_t* stackp);
 
+/*! Функция изменения максимального размера стэка
+ * @param [in] stackp Указатель на стэк
+ * @param [in] capacity Новый максимальный размер в элементах
+ */
+int PStackReserve(PStack_t* stackp, size_t capacity);
+
 /*! Функция проверки стэка на пустоту
  * @param [in] stackp Указатель на стэк
  * @return 1 - если стэк пуст, 0 - иначе
@@ -311,29 +317,13 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 
 int main()
 {	
-	PStack_t s = {};	
-	PStackInitMACRO(&s, 15);
+	PStack_t s = {};
 	
-	//printf("Inited %s\n", s.name);
+	printf("Before init\n");
+	PStackInitMACRO(&s, 16);
 	
-	printf("Before push\n");
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < 80; ++i)
 		PStackPush(&s, i);
-	printf("After push\n");
-		
-	PStackPop(&s);	
-	PStackPush(&s, 0x4D4D4D4D);
-	
-	uint8_t* hack = ((uint8_t*)(s.array)) - 1;
-	//*hack = 0; 
-	
-	//s.back_guard = 0;
-	
-	//PStackDumpMACRO(&s);
-		
-	for (int i = 0; i < 4; ++i)
-		PStackPop(&s);
-	printf("Done\n");
 		
 	PStackDumpMACRO(&s);
 }
@@ -378,10 +368,15 @@ uint32_t PStackCalcHash(PStack_t* stackp)
 		
 	HashLyAdd(&retval, &stackp->size, 
 		sizeof(stackp->size));
-		
+
+#ifndef PS_NDEBUG
 	HashLyAdd(&retval, stackp->array, 
 		sizeof(stack_el_t) * stackp->capacity);
-		
+#else
+	HashLyAdd(&retval, stackp->array, 
+		sizeof(stack_el_t) * stackp->size);
+#endif	
+	
 	return retval;
 }
 
@@ -466,21 +461,22 @@ void PStackInit(PStack_t* stackp, size_t capacity)
 	stackp->capacity 	= capacity;
 	stackp->size 		= 0;
 	
-	size_t elem_size 	= capacity * sizeof(stack_el_t);
-	size_t full_size 	= elem_size + 2 * ARRAY_OFFSET;
-	stackp->array 		= malloc(full_size);
+	size_t elem_size = capacity * sizeof(stack_el_t);
+	size_t full_size = elem_size + 2 * ARRAY_OFFSET;
 	
+	uint8_t* tmp_ptr 	= malloc(full_size);
+	stackp->array 		= (stack_el_t*)(tmp_ptr + ARRAY_OFFSET);
+		
 #ifndef PS_NDEBUG
-	uint8_t* start 	= (uint8_t*)(stackp->array);
-	stackp->array 	= (stack_el_t*)(start + ARRAY_OFFSET);
-	uint8_t* end	= (uint8_t*)(start + ARRAY_OFFSET + elem_size);
+	uint8_t* start 	= tmp_ptr;
+	uint8_t* end	= tmp_ptr + ARRAY_OFFSET + elem_size;
 
 	memset(start, 			GUARD_BYTE, ARRAY_OFFSET);
 	memset(stackp->array, 	DEAD_BYTE, 	elem_size);
 	memset(end, 			GUARD_BYTE, ARRAY_OFFSET);
 	
 	memset(stackp->front_guard, GUARD_BYTE, ARRAY_OFFSET);
-	memset(stackp->back_guard,	GUARD_BYTE, ARRAY_OFFSET);
+	memset(stackp->back_guard,  GUARD_BYTE, ARRAY_OFFSET);
 	
 	stackp->name = "[Default stack name]";
 	
@@ -500,6 +496,9 @@ void PStackPush(PStack_t* stackp, stack_el_t elem)
 	stackp->hash = PStackCalcHash(stackp);
 #endif
 
+	if (stackp->size == stackp->capacity)
+		PStackReserve(stackp, stackp->capacity * 2);
+
 	PS_ASSERT(stackp, AFTER_PUSH);
 }
 
@@ -518,6 +517,51 @@ stack_el_t PStackPop(PStack_t* stackp)
 	PS_ASSERT(stackp, AFTER_POP);
 	
 	return retval;
+}
+
+int PStackReserve(PStack_t* stackp, size_t capacity)
+{
+	PS_ASSERT(stackp, COMMON);
+	
+	size_t elem_size 	= capacity * sizeof(stack_el_t);
+	size_t new_size		= elem_size + 2 * ARRAY_OFFSET;
+	
+	uint8_t* real_ptr 	= ((uint8_t*)stackp->array) - ARRAY_OFFSET;
+	uint8_t* tmp_ptr 	= realloc(real_ptr, new_size);
+	
+	if (tmp_ptr == NULL)
+		return 0;
+	
+#ifndef PS_NDEBUG
+	uint8_t* start 	= tmp_ptr;
+	uint8_t* end 	= tmp_ptr + ARRAY_OFFSET + elem_size;
+	
+	memset(start, 	GUARD_BYTE, ARRAY_OFFSET);
+	memset(end,		GUARD_BYTE, ARRAY_OFFSET);
+#endif
+	
+	stack_el_t* new_array 	= (stack_el_t*)(tmp_ptr + ARRAY_OFFSET);
+	stack_el_t* new_end 	= new_array;
+	
+	for (; 	new_end < new_array + stackp->size; 
+			++new_end, ++stackp->array) 
+		*new_end = *stackp->array;
+		
+	stackp->array 		= new_array;
+	stackp->capacity 	= capacity;
+	
+#ifndef PS_NDEBUG
+	size_t dead_size = (capacity - (new_end - new_array));
+	dead_size *= sizeof(stack_el_t);
+	
+	memset(new_end, DEAD_BYTE, dead_size);
+#endif
+	
+	stackp->hash = PStackCalcHash(stackp);
+	
+	PS_ASSERT(stackp, COMMON);
+	
+	return 1;
 }
 
 int PStackIsEmpty(PStack_t* stackp)
