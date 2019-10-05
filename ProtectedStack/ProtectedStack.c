@@ -50,29 +50,31 @@ struct PStack_t {
 typedef struct PStack_t PStack_t;
 
 // Возможные ошибки
-typedef enum {
-	NO_ERROR 		= 1,
-	NULL_STACKP		= 1 << 1,
-	NULL_ARRAYP 	= 1 << 2,
-	NULL_CAPACITY 	= 1 << 3,
-	TOO_BIG_SIZE	= 1 << 4,
-	TOO_SMALL_SIZE	= 1 << 5,
-	GUARD_GORRUPTED = 1 << 6,
-	HASH_NOT_MATCH 	= 1 << 7
-} PS_ERROR;
+
+#define	NO_ERROR 	(1)
+#define	NULL_STACKP	(1 << 1)
+#define	NULL_ARRAYP 	(1 << 2)
+#define	NULL_CAPACITY 	(1 << 3)
+#define	TOO_BIG_SIZE	(1 << 4)
+#define	TOO_SMALL_SIZE	(1 << 5)
+#define	GUARD_GORRUPTED (1 << 6)
+#define	HASH_NOT_MATCH 	(1 << 7)
+
+typedef unsigned long long PS_ERROR;
 
 // Возможные причины проверки стэка
-typedef enum {
-	COMMON			= 1,
-	BEFORE_INIT		= 1 << 1,
-	AFTER_INIT		= 1 << 2,
-	BEFORE_DEINIT	= 1 << 3,
-	BEFORE_PUSH		= 1 << 4,
-	AFTER_PUSH		= 1 << 5,
-	BEFORE_POP		= 1 << 6,
-	AFTER_POP		= 1 << 7,
-	BEFORE_HASH		= 1 << 8
-} PS_CHECK_REASON;
+
+#define	COMMON		(1)
+#define	BEFORE_INIT	(1 << 1)
+#define	AFTER_INIT	(1 << 2)
+#define	BEFORE_DEINIT	(1 << 3)
+#define	BEFORE_PUSH	(1 << 4)
+#define	AFTER_PUSH	(1 << 5)
+#define	BEFORE_POP	(1 << 6)
+#define	AFTER_POP	(1 << 7)
+#define	BEFORE_HASH	(1 << 8)
+
+typedef unsigned long long PS_CHECK_REASON;
 
 // Код ошибки выхода программы при срабатывании PS_ASSERT
 #define ASSERT_EXIT_CODE (2)
@@ -142,8 +144,8 @@ void HashLyAdd(uint32_t* hash, const void* data, size_t size)
 	assert(hash != NULL);
 	assert(data != NULL);
 	
-    for(const uint8_t* i = (const uint8_t*)data; --size; ++i)
-        *hash = (*hash * 1664525) + (unsigned char)(*i) + 1013904223;
+    for(const uint8_t* i = reinterpret_cast<const uint8_t*>(data); --size; ++i)
+        *hash = (*hash * 1664525) + reinterpret_cast<unsigned char>(*i) + 1013904223;
 }
 
 /*! Функция проверки данных на то, являются ли они мёртвыми
@@ -323,6 +325,8 @@ int main()
 	
 	printf("Inited\n");
 	
+	s.array[10] = 0;
+
 	for (int i = 0; i < 500; ++i)
 		PStackPush(&s, i);
 		
@@ -332,7 +336,7 @@ int main()
 int IsGuard(const void* ptr, size_t size)
 {
 #ifndef PS_NDEBUG
-	for (uint8_t* tmp = (uint8_t*)ptr; size--; ++tmp)
+	for (const uint8_t* tmp = reinterpret_cast<const uint8_t*>(ptr); size--; ++tmp)
 		if (*tmp != GUARD_BYTE)
 			return 0;
 	return 1;
@@ -344,7 +348,7 @@ int IsGuard(const void* ptr, size_t size)
 int IsDead(const void* ptr, size_t size) 
 {
 #ifndef PS_NDEBUG
-	for (uint8_t* tmp = (uint8_t*)ptr; size--; ++tmp)
+	for (const uint8_t* tmp = reinterpret_cast<const uint8_t*>(ptr); size--; ++tmp)
 		if (*tmp != DEAD_BYTE)
 			return 0;
 	return 1;
@@ -401,8 +405,8 @@ PS_ERROR PStackCheck(PStack_t* stackp, PS_CHECK_REASON reason)
 			retval |= NULL_ARRAYP;
 #ifndef PS_NDEBUG
 		else {
-			uint8_t* start 	= (uint8_t*)(stackp->array) - ARRAY_OFFSET;
-			uint8_t* end	= (uint8_t*)(stackp->array + stackp->capacity);
+			uint8_t* start 	= reinterpret_cast<uint8_t*>(stackp->array) - ARRAY_OFFSET;
+			uint8_t* end	= reinterpret_cast<uint8_t*>(stackp->array + stackp->capacity);
 			
 			if (!IsGuard(start, ARRAY_OFFSET) ||
 				!IsGuard(end,	ARRAY_OFFSET))
@@ -469,10 +473,10 @@ void PStackInit(PStack_t* stackp, size_t capacity)
 	size_t full_size = elem_size + 2 * ARRAY_OFFSET;
 	
 	// Аллоцируем память
-	uint8_t* tmp_ptr 	= malloc(full_size);
+	uint8_t* tmp_ptr 	= reinterpret_cast<uint8_t*>(malloc(full_size));
 	
 	// Присваиваем указатель на данные
-	stackp->array 		= (stack_el_t*)(tmp_ptr + ARRAY_OFFSET);
+	stackp->array 		= reinterpret_cast<stack_el_t*>(tmp_ptr + ARRAY_OFFSET);
 		
 #ifndef PS_NDEBUG
 	// Начало "защитной" области памяти спереди
@@ -543,11 +547,11 @@ int PStackReserve(PStack_t* stackp, size_t capacity)
 	size_t data_size = capacity * sizeof(stack_el_t);
 	// Размер всей новой области в байтах
 	size_t new_size	 = data_size + 2 * ARRAY_OFFSET;
-	
+
 	// Вычисляем настоящий указатель на выделенную память
-	uint8_t* real_ptr 	= ((uint8_t*)stackp->array) - ARRAY_OFFSET;
+	uint8_t* real_ptr 	= reinterpret_cast<uint8_t*>(stackp->array) - ARRAY_OFFSET;
 	// Реаллоцируем память
-	uint8_t* tmp_ptr 	= realloc(real_ptr, new_size);
+	uint8_t* tmp_ptr 	= reinterpret_cast<uint8_t*>(realloc(real_ptr, new_size));
 	
 	if (tmp_ptr == NULL)
 		return 0;
@@ -556,18 +560,18 @@ int PStackReserve(PStack_t* stackp, size_t capacity)
 	size_t old_capacity = stackp->capacity;
 	
 	// Обновляем поля стэка
-	stackp->array = (stack_el_t*)(tmp_ptr + ARRAY_OFFSET);
+	stackp->array = reinterpret_cast<stack_el_t*>(tmp_ptr + ARRAY_OFFSET);
 	stackp->capacity = capacity;
 	
 #ifndef PS_NDEBUG
 	// Начало защитной области памяти сзади
-	uint8_t* guard_start = ((uint8_t*)stackp->array) + data_size;
+	uint8_t* guard_start = reinterpret_cast<uint8_t*>(stackp->array) + data_size;
 	
 	// Заполняем эту область
 	memset(guard_start, GUARD_BYTE, ARRAY_OFFSET);
 	
 	// Окончание области данных в старой памяти
-	uint8_t* data_end = (uint8_t*)(stackp->array + old_capacity);
+	uint8_t* data_end = reinterpret_cast<uint8_t*>(stackp->array + old_capacity);
 	
 	// Размер области, которую надо заполнить "мёртвыми" байтами
 	size_t dead_size = guard_start - data_end;
@@ -596,7 +600,7 @@ void PStackDeInit(PStack_t* stackp)
 	PS_ASSERT(stackp, BEFORE_DEINIT);
 	
 	// Вычисляем настоящий указатель на выделенную память
-	uint8_t* real_ptr = ((uint8_t*)stackp->array) - ARRAY_OFFSET;
+	uint8_t* real_ptr = reinterpret_cast<uint8_t*>(stackp->array) - ARRAY_OFFSET;
 	free(real_ptr);
 	
 	// Зануляем переменные
