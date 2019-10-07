@@ -145,7 +145,7 @@ void HashLyAdd(uint32_t* hash, const void* data, size_t size)
 	assert(hash != NULL);
 	assert(data != NULL);
 	
-    for(const uint8_t* i = reinterpret_cast<const uint8_t*>(data); --size; ++i)
+    for(const uint8_t* i = reinterpret_cast<const uint8_t*>(data); size--; ++i)
         *hash = (*hash * 1664525) + reinterpret_cast<unsigned char>(*i) + 1013904223;
 }
 
