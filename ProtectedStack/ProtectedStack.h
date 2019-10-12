@@ -51,9 +51,8 @@ struct PStack_t {
 typedef struct PStack_t PStack_t;
 
 // Возможные ошибки
-
-#define	NO_ERROR 	(1)
-#define	NULL_STACKP	(1 << 1)
+#define	NO_ERROR 	    (1)
+#define	NULL_STACKP	    (1 << 1)
 #define	NULL_ARRAYP 	(1 << 2)
 #define	NULL_CAPACITY 	(1 << 3)
 #define	TOO_BIG_SIZE	(1 << 4)
@@ -61,23 +60,25 @@ typedef struct PStack_t PStack_t;
 #define	GUARD_GORRUPTED (1 << 6)
 #define	HASH_NOT_MATCH 	(1 << 7)
 
+// Тип для ошибок
 typedef unsigned long long PS_ERROR;
 
 // Возможные причины проверки стэка
-
-#define	COMMON		(1)
-#define	BEFORE_INIT	(1 << 1)
-#define	AFTER_INIT	(1 << 2)
+#define	COMMON		    (1)
+#define	BEFORE_INIT	    (1 << 1)
+#define	AFTER_INIT	    (1 << 2)
 #define	BEFORE_DEINIT	(1 << 3)
-#define	BEFORE_PUSH	(1 << 4)
-#define	AFTER_PUSH	(1 << 5)
-#define	BEFORE_POP	(1 << 6)
-#define	AFTER_POP	(1 << 7)
-#define	BEFORE_HASH	(1 << 8)
+#define	BEFORE_PUSH	    (1 << 4)
+#define	AFTER_PUSH	    (1 << 5)
+#define	BEFORE_POP	    (1 << 6)
+#define	AFTER_POP	    (1 << 7)
+#define	BEFORE_HASH	    (1 << 8)
 
+// Тип для причины проверки
 typedef unsigned long long PS_CHECK_REASON;
 
 // Код ошибки выхода программы при срабатывании PS_ASSERT
+// Больше не возвращает
 #define ASSERT_EXIT_CODE (2)
 
 // Напечатать причину проверки
@@ -110,8 +111,10 @@ typedef unsigned long long PS_CHECK_REASON;
 		printf("## STACK ASSERT FAILED;\n");		\
 		PRINT_REASON(reason)						\
 		printf("## IN FUNCTION %s;\n", __func__);	\
+        printf("## ON LINE %d;\n", __LINE__);         \
 		PStackDump(stackp, err);					\
-		exit(ASSERT_EXIT_CODE);						\
+        return err;                                 \
+		/*exit(ASSERT_EXIT_CODE);*/					\
 	}												\
 }
 #else
@@ -120,15 +123,11 @@ typedef unsigned long long PS_CHECK_REASON;
 
 // Макрос для инициализации стэка - автоматически устанавливает имя
 #ifndef PS_NDEBUG
-#define PStackInitMACRO(stackp, capacity) {			\
-	PStackInit(stackp, capacity);					\
-	(stackp)->name = #stackp;						\
-	(stackp)->hash = PStackCalcHash(stackp);		\
-} // Не очень красиво - два раза хэш считаем
+#define PStackInitMACRO(stackp, capacity) \
+PStackInit(stackp, capacity, #stackp);
 #else
-#define PStackInitMACRO(stackp, capacity) {			\
-	PStackInit(stackp, capacity);					\
-}
+#define PStackInitMACRO(stackp, capacity) \
+PStackInit(stackp, capacity);
 #endif
 
 // Макрос для вызова PStackDump
@@ -168,43 +167,55 @@ int IsGuard(const void* ptr, size_t size);
 /*! Функция инициализации стэка
  * @param [in, out] stackp Указатель на стэк
  * @param [in] capacity Максимальный размер стэка в элементах
+ * @return Ошибка работы со стэком
  */
-void PStackInit(PStack_t* stackp, size_t capacity);
+PS_ERROR PStackInit(PStack_t* stackp, size_t capacity
+#ifndef PS_NDEBUG
+, const char* name
+#endif
+);
 
 /*! Функция добавления в стэк
  * @param [in] stackp Указатель на стэк
  * @param [in] elem Добавляемое значение
+ * @return Ошибка работы со стэком
  */
-void PStackPush(PStack_t* stackp, stack_el_t elem);
+PS_ERROR PStackPush(PStack_t* stackp, stack_el_t elem);
 
 /*! Функция удаления из стэка
  * @param [in] stackp Указатель на стэк
- * @return Удалённое значение
+ * @param [out] elem Возвращаемый элемент
+ * @return Ошибка работы со стэком
  */
-stack_el_t PStackPop(PStack_t* stackp);
+PS_ERROR PStackPop(PStack_t* stackp, stack_el_t* elem);
 
 /*! Функция изменения максимального размера стэка
  * @param [in] stackp Указатель на стэк
  * @param [in] capacity Новый максимальный размер в элементах
+ * @param [out] done Получилось ли расширить стэк
+ * @return Ошибка работы со стэком
  */
-int PStackReserve(PStack_t* stackp, size_t capacity);
+PS_ERROR PStackReserve(PStack_t* stackp, size_t capacity, int* done);
 
 /*! Функция проверки стэка на пустоту
  * @param [in] stackp Указатель на стэк
- * @return 1 - если стэк пуст, 0 - иначе
+ * @param [out] empty Пустой ли стэк
+ * @return Ошибка работы со стэком
  */
-int PStackIsEmpty(PStack_t* stackp);
+PS_ERROR PStackIsEmpty(PStack_t* stackp, int* empty);
 
 /*! Функция деинициализации стэка
  * @param [in] stackp Указатель на стэк
+ * @return Ошибка работы со стэком
  */
-void PStackDeInit(PStack_t* stackp);
+PS_ERROR PStackDeInit(PStack_t* stackp);
 
 /*! Функция вычисления хэша стэка
  * @param [in] stackp Указатель на стэк
- * @return Хэш стэка
+ * @param [out] hash Хэш стэка
+ * @return Ошибка работы со стэком
  */
-uint32_t PStackCalcHash(PStack_t* stackp);
+PS_ERROR PStackCalcHash(PStack_t* stackp, uint32_t* hash);
 
 /*! Функция проверки стэка на валидность
  * @param [in] stackp Указатель на стэк
@@ -285,9 +296,11 @@ void PStackDump(PStack_t* stackp, PS_ERROR error);
 
 // Вывод хэша
 #ifndef PS_NDEBUG
-#define PRINT_HASH(stackp)						\
-	printf("## Hash:\t%u (Should be %u);\n", 	\
-		stackp->hash, PStackCalcHash(stackp));
+#define PRINT_HASH(stackp) {					                    \
+    uint32_t hash = 0;                                              \
+    PStackCalcHash(stackp, &hash);                                  \
+	printf("## Hash:\t%u (Should be %u);\n", stackp->hash, hash);   \
+}
 #else 													
 #define PRINT_HASH(stackp) 						\
 	printf("## No hash support;\n");
@@ -342,32 +355,33 @@ int IsDead(const void* ptr, size_t size)
 #endif
 }
 
-uint32_t PStackCalcHash(PStack_t* stackp)
+PS_ERROR PStackCalcHash(PStack_t* stackp, uint32_t* hash)
 {
+    assert(hash != NULL);
 	PS_ASSERT(stackp, BEFORE_HASH)
-	
-	uint32_t retval = 0;
+
+    *hash = 0;
 
 #ifndef PS_NDEBUG	
-	HashLyAdd(&retval, stackp->name, 
+	HashLyAdd(hash, stackp->name, 
 		strlen(stackp->name));
 #endif
 
-	HashLyAdd(&retval, &stackp->capacity, 
+	HashLyAdd(hash, &stackp->capacity, 
 		sizeof(stackp->capacity));
 		
-	HashLyAdd(&retval, &stackp->size, 
+	HashLyAdd(hash, &stackp->size, 
 		sizeof(stackp->size));
 
 #ifndef PS_NDEBUG
-	HashLyAdd(&retval, stackp->array, 
+	HashLyAdd(hash, stackp->array, 
 		sizeof(stack_el_t) * stackp->capacity);
 #else
-	HashLyAdd(&retval, stackp->array, 
+	HashLyAdd(hash, stackp->array, 
 		sizeof(stack_el_t) * stackp->size);
 #endif	
 	
-	return retval;
+	return NO_ERROR;
 }
 
 PS_ERROR PStackCheck(PStack_t* stackp, PS_CHECK_REASON reason)
@@ -402,9 +416,12 @@ PS_ERROR PStackCheck(PStack_t* stackp, PS_CHECK_REASON reason)
 			!IsGuard(stackp->back_guard,	ARRAY_OFFSET))
 			retval |= GUARD_GORRUPTED;
 			
-		if (reason & ~BEFORE_HASH)
-			if (PStackCalcHash(stackp) != stackp->hash)
+		if (reason & ~BEFORE_HASH) {
+            uint32_t hash = 0;
+            PStackCalcHash(stackp, &hash);
+			if (hash != stackp->hash)
 				retval |= HASH_NOT_MATCH;
+        }
 #endif
 	}
 	
@@ -444,7 +461,11 @@ void PStackDump(PStack_t* stackp, PS_ERROR error)
 	}
 }
 
-void PStackInit(PStack_t* stackp, size_t capacity)
+PS_ERROR PStackInit(PStack_t* stackp, size_t capacity
+#ifndef PS_NDEBUG
+, const char* name
+#endif
+)
 {
 	PS_ASSERT(stackp, BEFORE_INIT)
 	
@@ -479,51 +500,63 @@ void PStackInit(PStack_t* stackp, size_t capacity)
 	memset(stackp->front_guard, GUARD_BYTE, ARRAY_OFFSET);
 	memset(stackp->back_guard,  GUARD_BYTE, ARRAY_OFFSET);
 	
-	stackp->name = "[Default stack name]";
+    assert(name != NULL);
+    
+	stackp->name = name;
 	
-	stackp->hash = PStackCalcHash(stackp);
+    PStackCalcHash(stackp, &(stackp->hash));
 #endif
 	
 	PS_ASSERT(stackp, AFTER_INIT)
+    
+    return NO_ERROR;
 }
 
-void PStackPush(PStack_t* stackp, stack_el_t elem)
+PS_ERROR PStackPush(PStack_t* stackp, stack_el_t elem)
 {
-	PS_ASSERT(stackp, BEFORE_PUSH);
+	PS_ASSERT(stackp, BEFORE_PUSH)
 	
 	stackp->array[stackp->size++] = elem;
 	
 #ifndef PS_NDEBUG
-	stackp->hash = PStackCalcHash(stackp);
+	PStackCalcHash(stackp, &(stackp->hash));
 #endif
 
-	if (stackp->size == stackp->capacity) 
-		PStackReserve(stackp, stackp->capacity * 2);
+	if (stackp->size == stackp->capacity) {
+        int reserved = 0;
+		PStackReserve(stackp, stackp->capacity * 2, &reserved);
+        if (!reserved)
+            return TOO_BIG_SIZE;
+    }
 	
-	PS_ASSERT(stackp, AFTER_PUSH);
+	PS_ASSERT(stackp, AFTER_PUSH)
+    
+    return NO_ERROR;
 }
 
-stack_el_t PStackPop(PStack_t* stackp)
+PS_ERROR PStackPop(PStack_t* stackp, stack_el_t* elem)
 {
-	PS_ASSERT(stackp, BEFORE_POP);
+    assert(elem != NULL);
+	PS_ASSERT(stackp, BEFORE_POP)
 	
-	stack_el_t retval = stackp->array[--stackp->size];
+	*elem = stackp->array[--stackp->size];
 	
 #ifndef PS_NDEBUG
 	stack_el_t* el_ptr = stackp->array + stackp->size;
 	memset(el_ptr, DEAD_BYTE, sizeof(stack_el_t));
 
-	stackp->hash = PStackCalcHash(stackp);
+	PStackCalcHash(stackp, &(stackp->hash));
 #endif
 	
-	PS_ASSERT(stackp, AFTER_POP);
+	PS_ASSERT(stackp, AFTER_POP)
 	
-	return retval;
+	return NO_ERROR;
 }
 
-int PStackReserve(PStack_t* stackp, size_t capacity)
+PS_ERROR PStackReserve(PStack_t* stackp, size_t capacity, int* done)
 {	
-	PS_ASSERT(stackp, COMMON);
+    assert(done != NULL);
+	PS_ASSERT(stackp, COMMON)
 
 	// Сужение пока не поддерживается
 	assert(stackp->capacity < capacity);
@@ -538,8 +571,10 @@ int PStackReserve(PStack_t* stackp, size_t capacity)
 	// Реаллоцируем память
 	uint8_t* tmp_ptr 	= reinterpret_cast<uint8_t*>(realloc(real_ptr, new_size));
 	
-	if (tmp_ptr == NULL)
-		return 0;
+	if (tmp_ptr == NULL) {
+		*done = 0;
+        return NO_ERROR;
+    }
 	
 	// Сохраняем старую вместимость
 	size_t old_capacity = stackp->capacity;
@@ -565,22 +600,26 @@ int PStackReserve(PStack_t* stackp, size_t capacity)
 	memset(data_end, DEAD_BYTE, dead_size);
 	
 	// Пересчитываем хэш
-	stackp->hash = PStackCalcHash(stackp);
+    PStackCalcHash(stackp, &(stackp->hash));
 #endif
 	
-	PS_ASSERT(stackp, COMMON);
+	PS_ASSERT(stackp, COMMON)
 	
-	return 1;
+    *done = 1;
+	return NO_ERROR;
 }
 
-int PStackIsEmpty(PStack_t* stackp)
+PS_ERROR PStackIsEmpty(PStack_t* stackp, int* empty)
 {
+    assert(empty != NULL);
 	PS_ASSERT(stackp, COMMON);
 	
-	return (stackp->size == 0);
+    *empty = (stackp->size == 0);
+    
+	return NO_ERROR;
 }
 
-void PStackDeInit(PStack_t* stackp)
+PS_ERROR PStackDeInit(PStack_t* stackp)
 {
 	PS_ASSERT(stackp, BEFORE_DEINIT);
 	
@@ -592,4 +631,6 @@ void PStackDeInit(PStack_t* stackp)
 	stackp->size 		= 0;
 	stackp->capacity 	= 0;
 	stackp->array		= NULL;
+    
+    return NO_ERROR;
 }
