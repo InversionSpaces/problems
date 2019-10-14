@@ -1,6 +1,7 @@
 #pragma once
 
 #include "foreachmacro.h"
+#include "binaryfile.h"
 
 #define STRING(x) #x,
 
@@ -17,7 +18,8 @@
 	const char* const names[] = {										\
 		FOR_EACH(STRING, __VA_ARGS__)									\
 	};																	\
-	int (*const processors[])(const char**, size_t) = {					\
+	int (*const processors[])(const char**, size_t, 					\
+					CommandsContainer* container) = {					\
 		FOR_EACH(PROCESSOR_FUNC, __VA_ARGS__)							\
 	};																	\
 	int (*const executers[])() = {										\
