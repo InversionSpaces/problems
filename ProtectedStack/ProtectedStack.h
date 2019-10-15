@@ -1,3 +1,4 @@
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -124,15 +125,15 @@ typedef unsigned long long PS_CHECK_REASON;
 // Макрос для инициализации стэка - автоматически устанавливает имя
 #ifndef PS_NDEBUG
 #define PStackInitMACRO(stackp, capacity) \
-PStackInit(stackp, capacity, #stackp);
+PStackInit(stackp, capacity, #stackp)
 #else
 #define PStackInitMACRO(stackp, capacity) \
-PStackInit(stackp, capacity);
+PStackInit(stackp, capacity)
 #endif
 
 // Макрос для вызова PStackDump
-#define PStackDumpMACRO(stackp) 					\
-		PStackDump(stackp, PStackCheck(stackp, COMMON));
+#define PStackDumpMACRO(stackp) \
+		PStackDump(stackp, PStackCheck(stackp, COMMON))
 
 /*! Функция аддитивного хэширования
  * @param [in, out] hash Указатель на переменную хэша. Начальное значение - 0

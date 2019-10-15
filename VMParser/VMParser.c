@@ -10,6 +10,7 @@
 #include "tokenizer.h"
 #include "binaryfile.h"
 #include "files.h"
+#include "cpu.h"
 
 int process_tokens(	const char **tokens, size_t ntokens, 
 					size_t nline, void* arg)
@@ -66,7 +67,17 @@ int main()
 	
 	printf("Done disasm\n");
 	
-	for (size_t i = 0; i < file->ncommands; ++i) {
-		printf("%s\n", cmd_names[get_command_id(file->commands[i].type)]);
+	CPU* cpu = CPUInit(file);
+	
+	CPUExecute(cpu);
+	
+	int empty = 1;
+	PStackIsEmpty(cpu->stack, &empty);
+	int i = 0;
+	while (!empty) {
+		stack_el_t a = 0;
+		PStackPop(cpu->stack, &a);
+		printf("%d:\t|%d|\n", i, a);
+		PStackIsEmpty(cpu->stack, &empty);
 	}
 }
