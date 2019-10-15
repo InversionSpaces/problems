@@ -32,11 +32,9 @@ int process_tokens(	const char **tokens, size_t ntokens,
 	return cmd_processors[id](tokens, ntokens, container);
 }
 
-int main()
+int vm_to_binary(const char* inname, const char* outname)
 {
-	const char* fname = "test.vm";
-	
-	char* file = read_file(fname);
+	char* file = read_file_str(inname);
 	
 	CommandsContainer* container = CommandsContainerInit();
 	
@@ -46,13 +44,29 @@ int main()
 								container
 								);
 								
-	if (!error) {
-		CommandsContainerToFile(container, "out.bin");
-		printf("Done\n");
-	}
-	else {
-		printf("Error\n");
-	}
+	if (!error) CommandsContainerToFile(container, outname);
 	
 	CommandsContainerDeInit(container);
+	
+	return error;
+}
+
+int main()
+{
+	int error = vm_to_binary("test.vm", "out.bin");
+	
+	if (!error) printf("Done asm\n");
+	else {
+		printf("Error asm\n");
+		
+		return 1;
+	}
+		
+	BinaryFile* file = BinaryFileFromFile("out.bin");
+	
+	printf("Done disasm\n");
+	
+	for (size_t i = 0; i < file->ncommands; ++i) {
+		printf("%s\n", cmd_names[get_command_id(file->commands[i].type)]);
+	}
 }

@@ -6,22 +6,13 @@
 
 #include "exitingalloc.h"
 #include "files.h"
-
-#pragma pack(push, 1)
-struct Command {
-	uint8_t type;
-	int32_t arg1;
-	int32_t arg2;
-};
-#pragma pack(pop)
-
-typedef struct Command Command;
+#include "commands.h"
 
 #pragma pack(push, 1)
 struct BinaryFile {
 	size_t ncommands;
 	
-	Command commands[1];
+	BinCommand commands[1];
 };
 #pragma pack(pop)
 
@@ -59,9 +50,9 @@ int CommandsContainerReserve(CommandsContainer* container, size_t size)
 	if (container->capacity == size)
 		return 0;
 	
+	size_t bsize = sizeof(BinaryFile) + (size - 1) * sizeof(BinCommand);
 	container->file = reinterpret_cast<BinaryFile*>(
-		exiting_realloc(container->file, sizeof(BinaryFile) + 
-			(size - 1) * sizeof(Command))
+		exiting_realloc(container->file, bsize)
 	);
 	
 	container->capacity = size;
@@ -69,7 +60,7 @@ int CommandsContainerReserve(CommandsContainer* container, size_t size)
 	return 0; //TODO ERROR
 }
 
-int CommandsContainerAdd(CommandsContainer* container, Command cmd)
+int CommandsContainerAdd(CommandsContainer* container, BinCommand cmd)
 {
 	assert(container != nullptr);
 	
@@ -96,11 +87,32 @@ int CommandsContainerToFile(CommandsContainer* container,
 	//CommandsContainerShrink(container);
 	
 	size_t n = container->file->ncommands;
-	size_t size = sizeof(BinaryFile) + (n - 1) * sizeof(Command);
+	size_t size = sizeof(BinaryFile) + (n - 1) * sizeof(BinCommand);
 	
 	write_file(container->file, size, filename);
 	
 	return 0; //TODO ERROR
+}
+
+BinaryFile* BinaryFileFromFile(const char* fname)
+{
+	assert(fname);
+	
+	void* ptr = 0;
+	size_t size = read_file_bin(fname, &ptr);
+	
+	BinaryFile* retval = reinterpret_cast<BinaryFile*>(ptr);
+	
+	size_t expected = sizeof(BinaryFile) + 
+			(retval->ncommands - 1) * sizeof(BinCommand);
+				
+	if (expected != size) {
+		printf("## Error reading binary file: size doesn't match\n");
+		
+		retval = 0;
+	}
+	
+	return retval;
 }
 
 void CommandsContainerDeInit(CommandsContainer* container)

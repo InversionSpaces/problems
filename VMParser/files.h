@@ -55,26 +55,51 @@ void write_file(const void* data, size_t size, const char* filename)
 	fclose(fp);
 }
 
-char *read_file(const char *filename)
+char* read_file_str(const char *filename)
 {
-	assert(filename != NULL);
+	assert(filename);
 
 	FILE *fp = exiting_fopen(filename, "rb");
 	size_t size = file_size(fp);
 
-	char *retval = reinterpret_cast<char*>(exiting_malloc(size + 1));
+	char* retval = reinterpret_cast<char*>(exiting_malloc(size + 1));
 
 	size_t readed = fread(retval, 1, size, fp);
 	if (readed != size) {
 		printf("# ERROR: Failed to read file: %s. \
-					Exiting...\n", filename);
-		fclose(fp);
-		exit(2);
+			Exiting...\n", filename);
+		
+		free(retval);
+		retval = 0;
 	}
-	
-	retval[size] = '\0';
+	else retval[size] = '\0';
 
 	fclose(fp);
 
 	return retval;
+}
+
+size_t read_file_bin(const char *filename, void** ptr)
+{
+	assert(filename);
+	assert(ptr);
+	
+	FILE *fp = exiting_fopen(filename, "rb");
+	size_t size = file_size(fp);
+	
+	*ptr = exiting_malloc(size);
+	
+	size_t readed = fread(*ptr, 1, size, fp);
+	
+	if (readed != size) {
+		printf("# ERROR: Failed to read file: %s. \
+			Exiting...\n", filename);
+			
+		free(*ptr);
+		*ptr = 0;
+		
+		return 0;
+	}
+	
+	return size;
 }

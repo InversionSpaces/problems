@@ -1,6 +1,19 @@
 #pragma once
 
+#include <inttypes.h>
+
 #include "foreachmacro.h"
+
+#pragma pack(push, 1)
+struct BinCommand {
+	uint8_t type;
+	int32_t arg1;
+	int32_t arg2;
+};
+#pragma pack(pop)
+
+typedef struct BinCommand BinCommand;
+
 #include "binaryfile.h"
 
 #define CMD_ID(...) EVAL_CONCAT(CMD_ID_, GET_1(__VA_ARGS__)),
@@ -28,7 +41,7 @@
 int PROCESSOR_NAME(__VA_ARGS__)	PROCESSOR_FUNC_ARGS					\
 {																	\
 	if (argc != GET_3(__VA_ARGS__)) return 1;						\
-	Command cmd = {	BINARY(__VA_ARGS__),  ARGS(__VA_ARGS__)};		\
+	BinCommand cmd = {	BINARY(__VA_ARGS__),  ARGS(__VA_ARGS__)};	\
 	return CommandsContainerAdd(container, cmd);					\
 }
 
