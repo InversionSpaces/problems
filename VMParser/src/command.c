@@ -1,40 +1,10 @@
-#pragma once
-
 #include <inttypes.h>
 
 #include "foreachmacro.h"
+#include "command.h"
 
-#pragma pack(push, 1)
-struct BinCommand {
-	uint8_t type;
-	int32_t arg1;
-	int32_t arg2;
-};
-#pragma pack(pop)
-
-typedef struct BinCommand BinCommand;
-
-int get_command_id(const char *name);
-int get_command_id(const uint8_t hex);
-
-const char* get_command_name(int id);
-
-#define PROCESSOR_FUNC_ARGS \
-(const char* args[], size_t argc, CommandsContainer* container)
-
-#define EXECUTOR_FUNC_ARGS \
-(CPU* cpu, BinCommand cmd)
-
-struct CommandsContainer;
-struct CPU;
-
-int (*get_processor(int id)) PROCESSOR_FUNC_ARGS;
-int (*get_executor(int id)) EXECUTOR_FUNC_ARGS;
-
-#include "cpu.h"
 #include "binaryfile.h"
-
-#define CMD_ID(...) EVAL_CONCAT(CMD_ID_, GET_1(__VA_ARGS__)),
+#include "cpu.h"
 
 #define NAME_STRING(...) EVAL_STRING(GET_1(__VA_ARGS__)),
 
@@ -75,9 +45,6 @@ int EXECUTOR_NAME(__VA_ARGS__) EXECUTOR_FUNC_ARGS					\
 }
 
 #define DECLARE_COMMANDS(...)							\
-enum CommandID {										\
-	FOR_EACH(CMD_ID, __VA_ARGS__)						\
-};														\
 FOR_EACH(PROCESSOR_FUNC, __VA_ARGS__)					\
 FOR_EACH(EXECUTOR_FUNC, __VA_ARGS__)					\
 const char* cmd_names[] = {								\
@@ -139,4 +106,9 @@ int (*get_executor(int id)) EXECUTOR_FUNC_ARGS
 const char* get_command_name(int id)
 {
 	return cmd_names[id];
+}
+
+uint8_t get_command_binary(int id)
+{
+    return cmd_binaries[id];
 }

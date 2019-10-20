@@ -1,30 +1,12 @@
-#pragma once
-
 #include <stdlib.h>
 #include <assert.h>
-#include <inttypes.h>
 
+#include "binaryfile.h"
+
+#include "tokenizer.h"
 #include "exitingalloc.h"
 #include "files.h"
-#include "commands.h"
-
-#pragma pack(push, 1)
-struct BinaryFile {
-	size_t ncommands;
-	
-	BinCommand commands[1];
-};
-#pragma pack(pop)
-
-typedef struct BinaryFile BinaryFile;
-
-struct CommandsContainer {
-	size_t capacity;
-	
-	BinaryFile* file;
-};
-
-typedef struct CommandsContainer CommandsContainer;
+#include "command.h"
 
 CommandsContainer* CommandsContainerInit() 
 {
@@ -81,32 +63,71 @@ int CommandsContainerShrink(CommandsContainer* container)
 	return CommandsContainerReserve(container, size);
 }
 
-int CommandsContainerToFile(CommandsContainer* container, 
-								const char* filename)
+void CommandsContainerDeInit(CommandsContainer* container)
 {
-	//CommandsContainerShrink(container);
+	assert(container);
 	
-	size_t n = container->file->ncommands;
-	size_t size = sizeof(BinaryFile) + (n - 1) * sizeof(BinCommand);
-	
-	write_file(container->file, size, filename);
-	
-	return 0; //TODO ERROR
+	free(container);
 }
 
-BinaryFile* BinaryFileFromFile(const char* fname)
+int process_tokens(	const char **tokens, 
+                    size_t ntokens, 
+					size_t nline, 
+                    void* arg)
+{
+    assert(tokens);
+    
+	if (ntokens == 0) return 0;
+		
+	int id = get_command_id(tokens[0]);
+	
+	if (id < 0) {
+		printf("## ERROR: Unknown command \"%s\" on line %lu\n", 
+			tokens[0], nline);
+		
+		return 1;
+	}
+	
+	CommandsContainer* container = 
+		reinterpret_cast<CommandsContainer*>(arg);
+		
+	return get_processor(id)(tokens, ntokens, container);
+}
+
+BinaryFile* BinaryFileFromVMFile(const char* fname)
+{
+    assert(fname);
+    
+    char* data = read_file_str(fname);
+    
+    CommandsContainer* container = CommandsContainerInit();
+	
+	int error = tokenize_lines(	data, 
+								" \t;,.", 
+								process_tokens, 
+								container
+								);
+    
+    CommandsContainerShrink(container);
+    
+    BinaryFile* retval = container->file;
+                                
+    CommandsContainerDeInit(container);
+    
+    return retval;
+}
+
+BinaryFile* BinaryFileFromBinFile(const char* fname)
 {
 	assert(fname);
 	
-	void* ptr = 0;
-	size_t size = read_file_bin(fname, &ptr);
+	FileData data = read_file_bin(fname);
+    BinaryFile* retval = reinterpret_cast<BinaryFile*>(data.ptr);
 	
-	BinaryFile* retval = reinterpret_cast<BinaryFile*>(ptr);
-	
-	size_t expected = sizeof(BinaryFile) + 
-			(retval->ncommands - 1) * sizeof(BinCommand);
+    size_t cmds_size = (retval->ncommands - 1) * sizeof(BinCommand);
+	size_t expected = sizeof(BinaryFile) + cmds_size;
 				
-	if (expected != size) {
+	if (expected != data.size) {
 		printf("## Error reading binary file: size doesn't match\n");
 		
 		retval = 0;
@@ -115,9 +136,3 @@ BinaryFile* BinaryFileFromFile(const char* fname)
 	return retval;
 }
 
-void CommandsContainerDeInit(CommandsContainer* container)
-{
-	assert(container != nullptr);
-	
-	free(container);
-}

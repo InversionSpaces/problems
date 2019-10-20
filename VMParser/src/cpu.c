@@ -1,24 +1,11 @@
-#pragma once
+#include <assert.h>
 
-#include "binaryfile.h"
-#include "commands.h"
+#include "cpu.h"
+
+#include "command.h"
 #include "exitingalloc.h"
 
-typedef int stack_el_t;
-
-#include "../ProtectedStack/ProtectedStack.h"
-
 #define INITIAL_SIZE (128)
-
-struct CPU {
-	size_t fetcher;
-	
-	PStack_t* stack;
-	
-	BinaryFile* code;
-};
-
-typedef struct CPU CPU;
 
 CPU* CPUInit(BinaryFile* code)
 {
@@ -68,4 +55,3 @@ int CPUExecute(CPU* cpu)
 	
 	return 0;
 }
-

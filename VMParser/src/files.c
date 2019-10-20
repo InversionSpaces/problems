@@ -1,4 +1,8 @@
-#pragma once
+#include <assert.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+
+#include "files.h"
 
 #include "exitingalloc.h"
 
@@ -39,15 +43,16 @@ size_t file_size(FILE *fp)
 	return retval;
 }
 
-void write_file(const void* data, size_t size, const char* filename)
+void write_file(FileData data, const char* filename)
 {
 	FILE *fp = exiting_fopen(filename, "wb");
 	
-	size_t writed = fwrite(data, 1, size, fp);
+	size_t writed = fwrite(data.ptr, 1, data.size, fp);
 	
-	if (writed != size) {
+	if (writed != data.size) {
 		printf("# ERROR: Failed to write file: %s. \
 					Exiting...\n", filename);
+                    
 		fclose(fp);
 		exit(2);
 	}
@@ -79,27 +84,25 @@ char* read_file_str(const char *filename)
 	return retval;
 }
 
-size_t read_file_bin(const char *filename, void** ptr)
+FileData read_file_bin(const char *filename)
 {
 	assert(filename);
-	assert(ptr);
 	
 	FILE *fp = exiting_fopen(filename, "rb");
 	size_t size = file_size(fp);
 	
-	*ptr = exiting_malloc(size);
+	void* ptr = exiting_malloc(size);
 	
-	size_t readed = fread(*ptr, 1, size, fp);
+	size_t readed = fread(ptr, 1, size, fp);
 	
 	if (readed != size) {
 		printf("# ERROR: Failed to read file: %s. \
 			Exiting...\n", filename);
 			
-		free(*ptr);
-		*ptr = 0;
-		
-		return 0;
+		free(ptr);
+		ptr = 0;
+        size = 0;
 	}
 	
-	return size;
+	return {ptr, size};
 }

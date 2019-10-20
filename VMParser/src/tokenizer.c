@@ -1,4 +1,7 @@
-#pragma once
+#include <assert.h>
+#include <string.h>
+
+#include "tokenizer.h"
 
 #include "exitingalloc.h"
 

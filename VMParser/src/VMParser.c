@@ -1,0 +1,33 @@
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/stat.h>
+
+#include "command.h"
+#include "tokenizer.h"
+#include "binaryfile.h"
+#include "files.h"
+#include "cpu.h"
+
+int main()
+{
+	BinaryFile* file = BinaryFileFromVMFile("test.vm");
+	
+	printf("Done disasm\n");
+	
+	CPU* cpu = CPUInit(file);
+	
+	CPUExecute(cpu);
+	
+	int empty = 1;
+	PStackIsEmpty(cpu->stack, &empty);
+	int i = 0;
+	while (!empty) {
+		stack_el_t a = 0;
+		PStackPop(cpu->stack, &a);
+		printf("%d:\t|%d|\n", i, a);
+		PStackIsEmpty(cpu->stack, &empty);
+	}
+}

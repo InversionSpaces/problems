@@ -1,4 +1,7 @@
-#pragma once
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "exitingalloc.h"
 
 void *exiting_calloc(size_t n, size_t size)
 {
