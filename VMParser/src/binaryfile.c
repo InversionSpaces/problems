@@ -8,28 +8,34 @@
 #include "files.h"
 #include "command.h"
 
-CommandsContainer* CommandsContainerInit() 
+
+CommandsContainer* CContainerInit() 
 {
 	CommandsContainer* retval = reinterpret_cast<CommandsContainer*>(
 		exiting_malloc(sizeof(CommandsContainer))
 	);
 	
-	retval->capacity = 1;
+	retval->lsize = 0;
+	retval->lcapacity = 32;
+	retval->labels = reinterpret_cast<LabelEntry*>(
+		exiting_malloc(sizeof(LabelEntry) * retval->lcapacity)
+	);
+	
+	retval->ccapacity = 1;
 	retval->file = reinterpret_cast<BinaryFile*>(
 		exiting_malloc(sizeof(BinaryFile))
 	);
-	
 	retval->file->ncommands = 0;
 	
 	return retval;
 }
 
-int CommandsContainerReserve(CommandsContainer* container, size_t size)
+int CContainerReserve(CommandsContainer* container, size_t size)
 {
 	assert(container != nullptr);
 	assert(size > 0);
 	
-	if (container->capacity == size)
+	if (container->ccapacity == size)
 		return 0;
 	
 	size_t bsize = sizeof(BinaryFile) + (size - 1) * sizeof(BinCommand);
@@ -37,39 +43,122 @@ int CommandsContainerReserve(CommandsContainer* container, size_t size)
 		exiting_realloc(container->file, bsize)
 	);
 	
-	container->capacity = size;
+	container->ccapacity = size;
 	
 	return 0; //TODO ERROR
 }
 
-int CommandsContainerAdd(CommandsContainer* container, BinCommand cmd)
+int CContainerAdd(CommandsContainer* container, BinCommand cmd)
 {
 	assert(container != nullptr);
 	
-	if (container->file->ncommands == container->capacity)
-		CommandsContainerReserve(container, container->capacity * 2);
+	if (container->file->ncommands == container->ccapacity)
+		CContainerReserve(container, container->ccapacity * 2);
 		
 	container->file->commands[container->file->ncommands++] = cmd;
 	
 	return 0; //TODO ERROR
 }
 
-int CommandsContainerShrink(CommandsContainer* container)
+int CContainerShrink(CommandsContainer* container)
 {
 	assert(container != nullptr);
 	
 	size_t size = container->file->ncommands;
 	
-	printf("Size: %lu\n", size);
-	
-	return CommandsContainerReserve(container, size);
+	return CContainerReserve(container, size);
 }
 
-void CommandsContainerDeInit(CommandsContainer* container)
+void CContainerDeInit(CommandsContainer* container)
 {
 	assert(container);
 	
+	free(container->labels);
 	free(container);
+}
+
+inline void LabelsReserve(CommandsContainer* container)
+{
+	assert(container);
+	
+	if (container->lcapacity == container->lsize) {
+		container->lcapacity *= 2;
+		container->labels = reinterpret_cast<LabelEntry*>(
+			exiting_realloc(container->labels, container->lcapacity)
+		);
+	}
+}
+
+inline int LabelsFind(CommandsContainer* container, const char* name)
+{
+	assert(container);
+	assert(container->labels);
+	assert(name);
+	
+	for (int i = 0; i < container->lsize; ++i)
+		if (strcmp(container->labels[i].name, name) == 0) 
+			return i;
+	
+	return -1;
+}
+
+int CContainerLabelSet(CommandsContainer* container, const char* name, int ncommand)
+{
+	assert(container);
+	assert(container->labels);
+	assert(name);
+	
+	int i = LabelsFind(container, name);
+	if (i < 0) {
+		LabelsReserve(container);
+		
+		container->labels[container->lsize++] = {name, ncommand};
+		
+		return 0;
+	}
+	
+	if (container->labels[i].ncommand == -1) {
+		container->labels[i].ncommand = ncommand;
+		
+		return 0;
+	}
+	
+	return 1;
+}
+
+int CContainerLabelGet(CommandsContainer* container, const char* name)
+{
+	assert(container);
+	assert(container->labels);
+	assert(name);
+	
+	int i = LabelsFind(container, name);
+	if (i < 0) {
+		LabelsReserve(container);
+		
+		i = container->lsize++;
+		
+		container->labels[i] = {name, -1};
+	}
+	
+	return i;
+}
+
+int CContainerPushLabels(CommandsContainer* container)
+{
+	for (int i = 0; i < container->lsize; ++i)
+		if (container->labels[i].ncommand == -1)
+			return 1;
+	
+	for (int i = 0; i < container->file->ncommands; ++i) {
+		BinCommand* cmd = &container->file->commands[i];
+		
+		int id = get_command_id(cmd->type);
+		if (id == get_command_id("JUMP"))
+			cmd->arg2 = container->labels[cmd->arg2].ncommand;
+	}
+	
+	return 0;		
 }
 
 int process_tokens(	const char **tokens, 
@@ -93,7 +182,11 @@ int process_tokens(	const char **tokens,
 	CommandsContainer* container = 
 		reinterpret_cast<CommandsContainer*>(arg);
 		
-	return get_processor(id)(tokens, ntokens, container);
+	int error = get_processor(id)(tokens, ntokens, container);
+	
+	if (error) printf("Error on %s\n", tokens[0]);
+	
+	return error;
 }
 
 BinaryFile* BinaryFileFromVMFile(const char* fname)
@@ -102,7 +195,7 @@ BinaryFile* BinaryFileFromVMFile(const char* fname)
     
     char* data = read_file_str(fname);
     
-    CommandsContainer* container = CommandsContainerInit();
+    CommandsContainer* container = CContainerInit();
 	
 	int error = tokenize_lines(	data, 
 								" \t;,.", 
@@ -113,16 +206,31 @@ BinaryFile* BinaryFileFromVMFile(const char* fname)
     if (error) {
 		printf("## Error while processing file...\n");
 		
-		CommandsContainerDeInit(container);
+		free(container->file);
+		CContainerDeInit(container);
+		free(data);
+		
+		return 0;
+	}
+	
+	error = CContainerPushLabels(container);
+	
+	if (error) {
+		printf("## Error while pushing labels...\n");
+		
+		free(container->file);
+		CContainerDeInit(container);
+		free(data);
 		
 		return 0;
 	}
     
-    CommandsContainerShrink(container);
+    CContainerShrink(container);
     
     BinaryFile* retval = container->file;
-                                
-    CommandsContainerDeInit(container);
+    
+    free(data);                            
+    CContainerDeInit(container);
     
     return retval;
 }
