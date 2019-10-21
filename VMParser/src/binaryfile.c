@@ -60,6 +60,8 @@ int CommandsContainerShrink(CommandsContainer* container)
 	
 	size_t size = container->file->ncommands;
 	
+	printf("Size: %lu\n", size);
+	
 	return CommandsContainerReserve(container, size);
 }
 
@@ -107,6 +109,14 @@ BinaryFile* BinaryFileFromVMFile(const char* fname)
 								process_tokens, 
 								container
 								);
+    
+    if (error) {
+		printf("## Error while processing file...\n");
+		
+		CommandsContainerDeInit(container);
+		
+		return 0;
+	}
     
     CommandsContainerShrink(container);
     

@@ -15,11 +15,25 @@ int main()
 {
 	BinaryFile* file = BinaryFileFromVMFile("test.vm");
 	
+	if (file == 0) {
+		printf("Error disasm\n");
+		
+		return 1;
+	}
+	
 	printf("Done disasm\n");
 	
 	CPU* cpu = CPUInit(file);
 	
-	CPUExecute(cpu);
+	int error = CPUExecute(cpu);
+	
+	if (error) {
+		printf("Error executing\n");
+		
+		CPUDeInit(cpu);
+		
+		return 1;
+	}
 	
 	int empty = 1;
 	PStackIsEmpty(cpu->stack, &empty);
@@ -30,4 +44,6 @@ int main()
 		printf("%d:\t|%d|\n", i, a);
 		PStackIsEmpty(cpu->stack, &empty);
 	}
+	
+	CPUDeInit(cpu);
 }

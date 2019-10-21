@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -50,28 +52,28 @@ struct PStack_t {
 typedef struct PStack_t PStack_t;
 
 // Возможные ошибки
-#define	NO_ERROR 	    (1)
-#define	NULL_STACKP	    (1 << 1)
-#define	NULL_ARRAYP 	(1 << 2)
-#define	NULL_CAPACITY 	(1 << 3)
-#define	TOO_BIG_SIZE	(1 << 4)
-#define	TOO_SMALL_SIZE	(1 << 5)
-#define	GUARD_GORRUPTED (1 << 6)
-#define	HASH_NOT_MATCH 	(1 << 7)
+#define	NO_ERROR 	    (0)
+#define	NULL_STACKP	    (1 << 0)
+#define	NULL_ARRAYP 	(1 << 1)
+#define	NULL_CAPACITY 	(1 << 2)
+#define	TOO_BIG_SIZE	(1 << 3)
+#define	TOO_SMALL_SIZE	(1 << 4)
+#define	GUARD_GORRUPTED (1 << 5)
+#define	HASH_NOT_MATCH 	(1 << 6)
 
 // Тип для ошибок
 typedef unsigned long long PS_ERROR;
 
 // Возможные причины проверки стэка
-#define	COMMON		    (1)
-#define	BEFORE_INIT	    (1 << 1)
-#define	AFTER_INIT	    (1 << 2)
-#define	BEFORE_DEINIT	(1 << 3)
-#define	BEFORE_PUSH	    (1 << 4)
-#define	AFTER_PUSH	    (1 << 5)
-#define	BEFORE_POP	    (1 << 6)
-#define	AFTER_POP	    (1 << 7)
-#define	BEFORE_HASH	    (1 << 8)
+#define	COMMON		    (0)
+#define	BEFORE_INIT	    (1 << 0)
+#define	AFTER_INIT	    (1 << 1)
+#define	BEFORE_DEINIT	(1 << 2)
+#define	BEFORE_PUSH	    (1 << 3)
+#define	AFTER_PUSH	    (1 << 4)
+#define	BEFORE_POP	    (1 << 5)
+#define	AFTER_POP	    (1 << 6)
+#define	BEFORE_HASH	    (1 << 7)
 
 // Тип для причины проверки
 typedef unsigned long long PS_CHECK_REASON;

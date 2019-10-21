@@ -29,6 +29,8 @@ CPU* CPUInit(BinaryFile* code)
 		retval = 0;
 	}
 	
+	retval->memory = MemoryInit();
+	
 	return retval;
 }
 
@@ -44,7 +46,8 @@ int CPUExecute(CPU* cpu)
 			return 1;
 		}
 		
-		printf("%s:\t%d\t%d\n", get_command_name(id), cmd.arg1, cmd.arg2);
+		printf("%s:\t%d\t%d\n", get_command_name(id), 
+								cmd.arg1, cmd.arg2);
 		
 		int error = get_executor(id)(cpu, cmd);
 		
@@ -54,4 +57,14 @@ int CPUExecute(CPU* cpu)
 	}
 	
 	return 0;
+}
+
+void CPUDeInit(CPU* cpu)
+{
+	assert(cpu);
+	
+	free(cpu->code);
+	MemoryDeInit(cpu->memory);
+	PStackDeInit(cpu->stack);
+	free(cpu);
 }
