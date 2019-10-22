@@ -168,6 +168,11 @@ int process_tokens(	const char **tokens,
                     void* arg)
 {
     assert(tokens);
+    assert(arg);
+    
+    for (size_t i = 0; i < ntokens; ++i)
+		if (*(tokens[i]) == ';')
+			ntokens = i;
     
 	if (ntokens == 0) return 0;
 		
@@ -199,7 +204,7 @@ BinaryFile* BinaryFileFromVMFile(const char* fname)
     CommandsContainer* container = CContainerInit();
 	
 	int error = tokenize_lines(	data, 
-								" \t;,.", 
+								" \t", 
 								process_tokens, 
 								container
 								);
