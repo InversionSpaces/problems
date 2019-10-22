@@ -9,6 +9,7 @@
 
 #define SIZE(x) (sizeof(x) / sizeof(0[x]))
 
+//======================================================================
 
 #define NAME_STRING(...) EVAL_STRING(GET_1(__VA_ARGS__)),
 
@@ -32,17 +33,13 @@ int PROCESSOR_NAME(__VA_ARGS__)	PROCESSOR_FUNC_ARGS					\
 	PCODE(__VA_ARGS__)												\
 }
 
-#define PUSH(x) PStackPush(stk, x)
-#define POP(x) PStackPop(stk, &x);
-
-#define ARG1 cmd.arg1
-#define ARG2 cmd.arg2
-
 #define EXECUTOR_FUNC(...)											\
 int EXECUTOR_NAME(__VA_ARGS__) EXECUTOR_FUNC_ARGS					\
 {																	\
 	ECODE(__VA_ARGS__)												\
 }
+
+//======================================================================
 
 #define DECLARE_COMMANDS(...)							\
 FOR_EACH(PROCESSOR_FUNC, __VA_ARGS__)					\
@@ -60,12 +57,15 @@ int (*cmd_executors[]) EXECUTOR_FUNC_ARGS = {			\
 	FOR_EACH(EXECUTOR_NAME_COMMA, __VA_ARGS__)			\
 };
 
+//======================================================================
 
 #define JMP_FUNC_NAME(...) EVAL_CONCAT(jmp_, GET_1(__VA_ARGS__))
 
 #define JMP_FUNC_NAME_COMMA(...) JMP_FUNC_NAME(__VA_ARGS__),
 
 #define JMP_FUNC_ARGS (CPU* cpu, BinCommand cmd)
+
+//======================================================================
 
 #define JMP_FUNC(...) 							\
 int JMP_FUNC_NAME(__VA_ARGS__) JMP_FUNC_ARGS	\
@@ -76,47 +76,57 @@ FOR_EACH(JMP_FUNC, __VA_ARGS__)							\
 const char* jmp_names[] = {								\
 	FOR_EACH(NAME_STRING, __VA_ARGS__)					\
 };														\
-const int jmp_binaries[] = {							\
+const uint8_t jmp_binaries[] = {						\
 	FOR_EACH(BINARY_COMMA, __VA_ARGS__)					\
 };														\
 int (*jmp_func[])JMP_FUNC_ARGS = {						\
 	FOR_EACH(JMP_FUNC_NAME_COMMA, __VA_ARGS__)			\
 };
 
+//======================================================================
+
+#define JUMP_IF_OP(OPERATION) 					\
+stack_el_t a = 0;								\
+int error = PStackPop(cpu->stack, &a);			\
+if (error) return error;						\
+if (a OPERATION 0) cpu->fetcher = cmd.arg2;		\
+else cpu->fetcher++;							\
+return 0;
+
+#define JUMP_UN				\
+cpu->fetcher = cmd.arg2;	\
+return 0;
+
+//======================================================================
+
 DECLARE_JUMPS(
 
 (UN, 0xAA, {
-	cpu->fetcher = cmd.arg2;
-	return 0;
+	JUMP_UN
 }),
  
 (EQ, 0xBB, {
-	stack_el_t a = 0;
-	int error = PStackPop(cpu->stack, &a);
-	if (error) return error;
-	if (a == 0) cpu->fetcher = cmd.arg2;
-	else cpu->fetcher++;
-	return 0;
+	JUMP_IF_OP(==)
 }), 
 
 (GT, 0xCC, {
-	stack_el_t a = 0;
-	int error = PStackPop(cpu->stack, &a);
-	if (error) return error;
-	if (a > 0) cpu->fetcher = cmd.arg2;
-	else cpu->fetcher++;
-	return 0;
+	JUMP_IF_OP(>)
 }), 
 
 (LS, 0xDD, {
-	stack_el_t a = 0;
-	int error = PStackPop(cpu->stack, &a);
-	if (error) return error;
-	if (a < 0) cpu->fetcher = cmd.arg2;
-	else cpu->fetcher++;
-	return 0;
+	JUMP_IF_OP(<)
+}),
+
+(LEQ, 0xEE, {
+	JUMP_IF_OP(<=)
+}),
+
+(GEQ, 0xEE, {
+	JUMP_IF_OP(>=)
 })
 )
+
+//======================================================================
 
 int get_jmp_id(const char *name)
 {
@@ -140,7 +150,22 @@ int get_jmp_id(const uint8_t hex)
 	return -1;
 }
 
+//======================================================================
 
+#define POP_PUSH_OP(OPERATION)					\
+stack_el_t a = 0;								\
+stack_el_t b = 0;								\
+int error = PStackPop(cpu->stack, &a);			\
+if (error) return error;						\
+error = PStackPop(cpu->stack, &b);				\
+if (error) return error;						\
+return PStackPush(cpu->stack, a OPERATION b);
+
+#define PUT_CMD 						\
+BinCommand cmd = {hex, 0, 0};			\
+return CContainerAdd(container, cmd);
+
+//======================================================================
 
 DECLARE_COMMANDS(	
 
@@ -148,7 +173,8 @@ DECLARE_COMMANDS(
 ({
 	int mem_id = get_mem_id(args[1]);
 	if (mem_id < 0) return 1;
-	BinCommand cmd = {hex, mem_id, atoi(args[2])};
+	// TODO something to not convert mem_id
+	BinCommand cmd = {hex, uint8_t(mem_id), atoi(args[2])}; 
 	return CContainerAdd(container, cmd);
 }), 
 ({
@@ -168,7 +194,8 @@ DECLARE_COMMANDS(
 ({
 	int mem_id = get_mem_id(args[1]);
 	if (mem_id <= 0) return 1;
-	BinCommand cmd = {hex, mem_id, atoi(args[2])};
+	// TODO something to not convert mem_id
+	BinCommand cmd = {hex, uint8_t(mem_id), atoi(args[2])};
 	return CContainerAdd(container, cmd);
 }),	
 ({
@@ -181,71 +208,46 @@ DECLARE_COMMANDS(
 
 (MUL,	0xFC,	1,	
 ({
-	BinCommand cmd = {hex, 0, 0};
-	return CContainerAdd(container, cmd);
+	PUT_CMD
 }),	
 ({
 	cpu->fetcher++;
-	stack_el_t a = 0;
-	stack_el_t b = 0;
-	int error = PStackPop(cpu->stack, &a);
-	if (error) return error;
-	error = PStackPop(cpu->stack, &b);
-	if (error) return error;
-	return PStackPush(cpu->stack, a * b);
+	POP_PUSH_OP(*)
 })),
 
 (DIV,	0xFD,	1,	
 ({
-	BinCommand cmd = {hex, 0, 0};
-	return CContainerAdd(container, cmd);
+	PUT_CMD
 }),	
 ({
 	cpu->fetcher++;
-	stack_el_t a = 0;
-	stack_el_t b = 0;
-	int error = PStackPop(cpu->stack, &a);
-	if (error) return error;
-	error = PStackPop(cpu->stack, &b);
-	if (error) return error;
-	return PStackPush(cpu->stack, a / b);
+	POP_PUSH_OP(/)
 })),
 
 (ADD,	0xFE,	1,	
 ({
-	BinCommand cmd = {hex, 0, 0};
-	return CContainerAdd(container, cmd);
+	PUT_CMD
 }),	
 ({
 	cpu->fetcher++;
-	stack_el_t a = 0;
-	stack_el_t b = 0;
-	int error = PStackPop(cpu->stack, &a);
-	if (error) return error;
-	error = PStackPop(cpu->stack, &b);
-	if (error) return error;
-	return PStackPush(cpu->stack, a + b);
+	POP_PUSH_OP(+)
 })),
 
 (SUB,	0xFF,	1,	
 ({
-	BinCommand cmd = {hex, 0, 0};
-	return CContainerAdd(container, cmd);
+	PUT_CMD
 }),	
 ({
 	cpu->fetcher++;
-	stack_el_t a = 0;
-	stack_el_t b = 0;
-	int error = PStackPop(cpu->stack, &a);
-	if (error) return error;
-	error = PStackPop(cpu->stack, &b);
-	if (error) return error;
-	return PStackPush(cpu->stack, a - b);
+	POP_PUSH_OP(-)
 })),
 
 (LABEL, 0x00, 	2, 	
 ({
-	return CContainerLabelSet(container, args[1], container->file->ncommands);
+	return CContainerLabelSet(	container, 
+								args[1], 
+								container->file->ncommands
+								);
 }), 
 ({
 	// No cpu command
@@ -269,6 +271,8 @@ DECLARE_COMMANDS(
 	return jmp_func[id](cpu, cmd);
 }))
 )
+
+//======================================================================
 
 int get_command_id(const char *name)
 {
@@ -311,3 +315,5 @@ uint8_t get_command_binary(int id)
 {
     return cmd_binaries[id];
 }
+
+//======================================================================

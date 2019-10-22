@@ -41,7 +41,7 @@ int main()
 	while (!empty) {
 		stack_el_t a = 0;
 		PStackPop(cpu->stack, &a);
-		printf("%d:\t|%d|\n", i, a);
+		printf("%d:\t|%d|\n", i++, a);
 		PStackIsEmpty(cpu->stack, &empty);
 	}
 	
