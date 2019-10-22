@@ -7,6 +7,8 @@
 struct CPU {
 	Memory* memory;
 	
+	PStack_t* rstack;
+	
 	PStack_t* stack;
 	
 	size_t fetcher;

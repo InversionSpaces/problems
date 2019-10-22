@@ -169,7 +169,7 @@ return CContainerAdd(container, cmd);
 
 DECLARE_COMMANDS(	
 
-(PUSH, 	0xFA, 	3, 	
+(PUSH, 0xFA, 3, 	
 ({
 	int mem_id = get_mem_id(args[1]);
 	if (mem_id < 0) return 1;
@@ -190,7 +190,7 @@ DECLARE_COMMANDS(
 	}
 })), 
 
-(POP, 	0xFB, 	3, 	
+(POP, 0xFB, 3, 	
 ({
 	int mem_id = get_mem_id(args[1]);
 	if (mem_id <= 0) return 1;
@@ -206,7 +206,7 @@ DECLARE_COMMANDS(
 	return MemorySet(cpu->memory, cmd.arg1, cmd.arg2, val);
 })),
 
-(MUL,	0xFC,	1,	
+(MUL, 0xFC, 1,	
 ({
 	PUT_CMD
 }),	
@@ -215,7 +215,7 @@ DECLARE_COMMANDS(
 	POP_PUSH_OP(*)
 })),
 
-(DIV,	0xFD,	1,	
+(DIV, 0xFD, 1,	
 ({
 	PUT_CMD
 }),	
@@ -224,7 +224,7 @@ DECLARE_COMMANDS(
 	POP_PUSH_OP(/)
 })),
 
-(ADD,	0xFE,	1,	
+(ADD, 0xFE, 1,	
 ({
 	PUT_CMD
 }),	
@@ -233,7 +233,7 @@ DECLARE_COMMANDS(
 	POP_PUSH_OP(+)
 })),
 
-(SUB,	0xFF,	1,	
+(SUB, 0xFF, 1,	
 ({
 	PUT_CMD
 }),	
@@ -242,7 +242,7 @@ DECLARE_COMMANDS(
 	POP_PUSH_OP(-)
 })),
 
-(LABEL, 0x00, 	2, 	
+(LABEL, 0x00, 2, 	
 ({
 	return CContainerLabelSet(	container, 
 								args[1], 
@@ -254,7 +254,7 @@ DECLARE_COMMANDS(
 	return 1;
 })),
 
-(JUMP, 0xC1, 	3, 	
+(JUMP, 0xC1, 3, 	
 ({ 
 	int id = get_jmp_id(args[1]);
 	if (id < 0) return 1; 
@@ -269,6 +269,34 @@ DECLARE_COMMANDS(
 	int id = get_jmp_id(cmd.arg1);
 	if (id < 0) return 1;
 	return jmp_func[id](cpu, cmd);
+})),
+
+(CALL, 0xC2, 2, 	
+({
+	BinCommand cmd = {
+				hex,
+				0,
+				CContainerLabelGet(container, args[1])
+				};
+	return CContainerAdd(container, cmd);
+}), 
+({
+	int error = PStackPush(cpu->rstack, cpu->fetcher);
+	if (error) return error;
+	cpu->fetcher = cmd.arg2;
+	return 0;
+})),
+
+(RETURN, 0xC3, 1, 	
+({
+	PUT_CMD
+}), 
+({
+	int tmp = 0;
+	int error = PStackPop(cpu->rstack, &tmp);
+	if (error) return error;
+	cpu->fetcher = tmp + 1;
+	return 0;
 }))
 )
 

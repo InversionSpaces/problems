@@ -17,6 +17,7 @@ CPU* CPUInit(BinaryFile* code)
 	
 	retval->fetcher = 0;
 	retval->code = code;
+	
 	retval->stack = reinterpret_cast<PStack_t*>(
 						exiting_malloc(sizeof(PStack_t))
 					);
@@ -25,6 +26,21 @@ CPU* CPUInit(BinaryFile* code)
 	if (error != NO_ERROR) {
 		printf("## Error: failed to init stack\n");
 		
+		free(retval->stack);
+		free(retval);
+		retval = 0;
+	}
+	
+	retval->rstack = reinterpret_cast<PStack_t*>(
+						exiting_malloc(sizeof(PStack_t))
+					);
+	
+	error = PStackInitMACRO(retval->rstack, INITIAL_SIZE);
+	if (error != NO_ERROR) {
+		printf("## Error: failed to init stack\n");
+		
+		free(retval->stack);
+		free(retval->rstack);
 		free(retval);
 		retval = 0;
 	}
@@ -46,7 +62,7 @@ int CPUExecute(CPU* cpu)
 			return 1;
 		}
 		
-		//printf("%s:\t%d\t%d\n", get_command_name(id), cmd.arg1, cmd.arg2);
+		printf("%s:\t%d\t%d\n", get_command_name(id), cmd.arg1, cmd.arg2);
 		
 		int error = get_executor(id)(cpu, cmd);
 		
@@ -60,8 +76,13 @@ void CPUDeInit(CPU* cpu)
 {
 	assert(cpu);
 	
-	free(cpu->code);
 	MemoryDeInit(cpu->memory);
+	
 	PStackDeInit(cpu->stack);
+	PStackDeInit(cpu->rstack);
+	
+	free(cpu->code);
+	free(cpu->stack);
+	free(cpu->rstack);
 	free(cpu);
 }

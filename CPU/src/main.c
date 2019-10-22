@@ -21,8 +21,6 @@ int main()
 		return 1;
 	}
 	
-	printf("Done disasm\n");
-	
 	CPU* cpu = CPUInit(file);
 	
 	int error = CPUExecute(cpu);
@@ -41,7 +39,9 @@ int main()
 	while (!empty) {
 		stack_el_t a = 0;
 		PStackPop(cpu->stack, &a);
+		
 		printf("%d:\t|%d|\n", i++, a);
+		
 		PStackIsEmpty(cpu->stack, &empty);
 	}
 	

@@ -154,7 +154,8 @@ int CContainerPushLabels(CommandsContainer* container)
 		BinCommand* cmd = &container->file->commands[i];
 		
 		int id = get_command_id(cmd->type);
-		if (id == get_command_id("JUMP"))
+		if (id == get_command_id("JUMP") || 
+			id == get_command_id("CALL"))
 			cmd->arg2 = container->labels[cmd->arg2].ncommand;
 	}
 	
