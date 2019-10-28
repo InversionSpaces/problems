@@ -8,6 +8,11 @@
 #include "files.h"
 #include "command.h"
 
+inline size_t binfile_size(const BinaryFile* file)
+{
+	return (sizeof(BinaryFile) + 
+			(file->ncommands - 1) * sizeof(BinCommand));
+}
 
 CommandsContainer* CContainerInit() 
 {
@@ -258,5 +263,21 @@ BinaryFile* BinaryFileFromBinFile(const char* fname)
 	}
 	
 	return retval;
+}
+
+int BinaryFileToFile(BinaryFile* file, const char* fname)
+{
+	assert(file);
+	assert(fname);
+	
+	FILE* fp = exiting_fopen(fname, "w");
+	
+	size_t size = binfile_size(file);
+	
+	size_t written = fwrite(file, 1, size, fp);
+	
+	fclose(fp);
+	
+	return (written != size);
 }
 

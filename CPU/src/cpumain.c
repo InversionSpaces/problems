@@ -5,18 +5,28 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#include "command.h"
-#include "tokenizer.h"
 #include "binaryfile.h"
-#include "files.h"
 #include "cpu.h"
 
-int main()
+inline int print_usage(const char* name)
 {
-	BinaryFile* file = BinaryFileFromVMFile("test.vm");
+	printf("## CPU for .bin files\n");
+	printf("## By InversionSpaces\n");
+	printf("## Executes code in BIN_FILE\n");
+	printf("## Usage: %s BIN_FILE\n", name);
+	
+	return 0;
+}
+
+int main(int argc, char* argv[])
+{
+	if (argc != 2)
+		return print_usage(argv[0]);
+	
+	BinaryFile* file = BinaryFileFromBinFile(argv[1]);
 	
 	if (file == 0) {
-		printf("Error disasm\n");
+		printf("## Error disasm\n");
 		
 		return 1;
 	}
@@ -26,7 +36,7 @@ int main()
 	int error = CPUExecute(cpu);
 	
 	if (error) {
-		printf("Error executing\n");
+		printf("## Error executing\n");
 		
 		CPUDeInit(cpu);
 		
@@ -40,7 +50,7 @@ int main()
 		stack_el_t a = 0;
 		PStackPop(cpu->stack, &a);
 		
-		printf("%d:\t|%d|\n", i++, a);
+		printf("## %d:\t|%d|\n", i++, a);
 		
 		PStackIsEmpty(cpu->stack, &empty);
 	}
