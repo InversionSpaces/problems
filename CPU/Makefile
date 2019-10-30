@@ -6,6 +6,15 @@ ASMSRC = src/asmmain.c
 CPUSRC = src/cpumain.c
 DISASMSRC = src/disasmmain.c
 
+all: clean asm cpu
+
+clean:
+	rm -f asm cpu
+
+run: all
+	./asm test.vm test.bin
+	./cpu test.bin
+	
 asm:
 	$(CC) -I$(INCDIR) $(BASESRC) $(ASMSRC) -o asm
 

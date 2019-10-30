@@ -18,6 +18,8 @@ typedef struct BinaryFile BinaryFile;
 BinaryFile* BinaryFileFromBinFile(const char* fname);
 BinaryFile* BinaryFileFromVMFile(const char* fname);
 
+int BinaryFileToFile(BinaryFile* file, const char* fname);
+
 
 typedef struct LabelEntry LabelEntry;
 

@@ -24,13 +24,15 @@ struct Memory {												\
 	FOR_EACH(ARRAY_DEF, __VA_ARGS__)						\
 };															\
 const char* mem_names[] = {									\
-	"CONSTANT",												\
 	FOR_EACH(NAME_STRING, __VA_ARGS__)						\
+	"CONSTANT",												\
+	"IN",													\
+	"OUT",													\
 };															\
 enum MEM_ID 												\
 {															\
-	LOC_CONSTANT = 0,										\
 	FOR_EACH(LOC_ID_COMMA, __VA_ARGS__)						\
+	NOT_MEM_ID												\
 };															\
 stack_el_t* get_mem_loc(Memory* mem, int mem_id)			\
 {															\
@@ -38,10 +40,11 @@ stack_el_t* get_mem_loc(Memory* mem, int mem_id)			\
 	return 0;												\
 }
 
-DECLARE_MEMORY(	(LOCAL, 128), 
-				(GLOBAL, 128),
-				(MEMORY, 1024)
-				)
+DECLARE_MEMORY(	
+		(LOCAL, 128), 
+		(GLOBAL, 128),
+		(MEMORY, 1024)
+	)
 
 #define SIZE(x) (sizeof(x) / sizeof(0[x]))
 
@@ -52,6 +55,11 @@ Memory* MemoryInit()
 					);
 					
 	return retval;
+}
+
+int get_not_mem_id()
+{
+	return NOT_MEM_ID;
 }
 
 int get_mem_id(const char* name)
@@ -67,7 +75,7 @@ int MemorySet(Memory* mem, int mem_id, int offset, stack_el_t val)
 {
 	assert(mem);
 	
-	if ((mem_id > 0) && (mem_id < SIZE(mem_names))) {		
+	if ((mem_id >= 0) && (mem_id < NOT_MEM_ID)) {		
 		get_mem_loc(mem, mem_id)[offset] = val;
 		
 		return 0;
@@ -80,7 +88,7 @@ int MemoryGet(Memory* mem, int mem_id, int offset, stack_el_t* val)
 {
 	assert(mem);
 	
-	if ((mem_id > 0) && (mem_id < SIZE(mem_names))) { 
+	if ((mem_id >= 0) && (mem_id < NOT_MEM_ID)) { 
 		*val = get_mem_loc(mem, mem_id)[offset];
 		
 		return 0;

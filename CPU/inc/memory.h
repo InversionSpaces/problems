@@ -10,6 +10,8 @@ Memory* MemoryInit();
 				
 int get_mem_id(const char* name);
 
+int get_not_mem_id();
+
 int MemorySet(Memory* mem, int mem_id, int offset, stack_el_t val);
 
 int MemoryGet(Memory* mem, int mem_id, int offset, stack_el_t* val);

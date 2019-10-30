@@ -172,15 +172,27 @@ DECLARE_COMMANDS(
 (PUSH, 0xFA, 3, 	
 ({
 	int mem_id = get_mem_id(args[1]);
-	if (mem_id < 0) return 1;
+	if (mem_id >= get_not_mem_id() &&
+		mem_id != get_mem_id("CONSTANT") &&
+		mem_id != get_mem_id("IN")) return 1;
 	// TODO something to not convert mem_id
 	BinCommand cmd = {hex, uint8_t(mem_id), atoi(args[2])}; 
 	return CContainerAdd(container, cmd);
 }), 
 ({
 	cpu->fetcher++;
-	if (cmd.arg1 == 0) {
+	if (cmd.arg1 == get_mem_id("CONSTANT")) {
 		return PStackPush(cpu->stack, cmd.arg2);
+	}
+	else if (cmd.arg1 == get_mem_id("IN")) {
+		int error = 0;
+		stack_el_t val = 0;
+		for (int i = 0; i < cmd.arg2; ++i) {
+			if (!scanf("%d", &val)) return 1;
+			error = PStackPush(cpu->stack, val);
+			if (error) return error;
+		}
+		return error;
 	}
 	else {
 		stack_el_t val = 0;
@@ -193,17 +205,30 @@ DECLARE_COMMANDS(
 (POP, 0xFB, 3, 	
 ({
 	int mem_id = get_mem_id(args[1]);
-	if (mem_id <= 0) return 1;
+	if (mem_id >= get_not_mem_id() &&
+		mem_id != get_mem_id("OUT")) return 1;
 	// TODO something to not convert mem_id
 	BinCommand cmd = {hex, uint8_t(mem_id), atoi(args[2])};
 	return CContainerAdd(container, cmd);
 }),	
 ({
 	cpu->fetcher++;
-	stack_el_t val = 0;
-	int error = PStackPop(cpu->stack, &val);
-	if (error) return error;
-	return MemorySet(cpu->memory, cmd.arg1, cmd.arg2, val);
+	if (cmd.arg1 == get_mem_id("OUT")) {
+		stack_el_t val = 0;
+		int error = 0;
+		for (int i = 0; i < cmd.arg2; ++i) {
+			error = PStackPop(cpu->stack, &val);
+			if (error) return error;
+			if (!printf("%d\n", val)) return 1;
+		}
+		return error;
+	}
+	else {
+		stack_el_t val = 0;
+		int error = PStackPop(cpu->stack, &val);
+		if (error) return error;
+		return MemorySet(cpu->memory, cmd.arg1, cmd.arg2, val);
+	}
 })),
 
 (MUL, 0xFC, 1,	
