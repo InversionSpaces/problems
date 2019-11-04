@@ -167,6 +167,8 @@ return CContainerAdd(container, cmd);
 
 //======================================================================
 
+#define INDEX ("INDEX", -1)
+
 DECLARE_COMMANDS(	
 
 (PUSH, 0xFA, 3, 	
@@ -175,8 +177,12 @@ DECLARE_COMMANDS(
 	if (mem_id >= get_not_mem_id() &&
 		mem_id != get_mem_id("CONSTANT") &&
 		mem_id != get_mem_id("IN")) return 1;
+		
+	int arg2 = strcmp(args[2], GET_1 INDEX ) ? 
+				atoi(args[2]) : GET_2 INDEX ;
+				
 	// TODO something to not convert mem_id
-	BinCommand cmd = {hex, uint8_t(mem_id), atoi(args[2])}; 
+	BinCommand cmd = {hex, uint8_t(mem_id), arg2}; 
 	return CContainerAdd(container, cmd);
 }), 
 ({
@@ -194,12 +200,19 @@ DECLARE_COMMANDS(
 		}
 		return error;
 	}
-	else {
-		stack_el_t val = 0;
-		int error = MemoryGet(cpu->memory, cmd.arg1, cmd.arg2, &val);
+	int index = 0;
+	if (cmd.arg2 == GET_2 INDEX ) {
+		int error = PStackPop(cpu->stack, &index);
 		if (error) return error;
-		return PStackPush(cpu->stack, val);
 	}
+	else {
+		index = cmd.arg2;
+	}
+	
+	stack_el_t val = 0;
+	int error = MemoryGet(cpu->memory, cmd.arg1, index, &val);
+	if (error) return error;
+	return PStackPush(cpu->stack, val);
 })), 
 
 (POP, 0xFB, 3, 	
@@ -207,8 +220,12 @@ DECLARE_COMMANDS(
 	int mem_id = get_mem_id(args[1]);
 	if (mem_id >= get_not_mem_id() &&
 		mem_id != get_mem_id("OUT")) return 1;
+		
+	int arg2 = strcmp(args[2], GET_1 INDEX ) ? 
+				atoi(args[2]) : GET_2 INDEX ;
+				
 	// TODO something to not convert mem_id
-	BinCommand cmd = {hex, uint8_t(mem_id), atoi(args[2])};
+	BinCommand cmd = {hex, uint8_t(mem_id), arg2};
 	return CContainerAdd(container, cmd);
 }),	
 ({
@@ -223,12 +240,19 @@ DECLARE_COMMANDS(
 		}
 		return error;
 	}
-	else {
-		stack_el_t val = 0;
-		int error = PStackPop(cpu->stack, &val);
+	int index = 0;
+	if (cmd.arg2 == GET_2 INDEX ) {
+		int error = PStackPop(cpu->stack, &index);
 		if (error) return error;
-		return MemorySet(cpu->memory, cmd.arg1, cmd.arg2, val);
 	}
+	else {
+		index = cmd.arg2;
+	}
+	
+	stack_el_t val = 0;
+	int error = PStackPop(cpu->stack, &val);
+	if (error) return error;
+	return MemorySet(cpu->memory, cmd.arg1, index, val);
 })),
 
 (MUL, 0xFC, 1,	
