@@ -2,7 +2,7 @@
 
 typedef int stack_el_t;
 
-#include "ProtectedStack.h"
+#include "ProtectedStack.hpp"
 
 TEST(PStackTests, PushTest) 
 {
