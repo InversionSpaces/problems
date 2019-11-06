@@ -62,7 +62,7 @@ int CPUExecute(CPU* cpu)
 			return 1;
 		}
 		
-		//printf("## %s:\t%d\t%d\n", get_command_name(id), cmd.arg1, cmd.arg2);
+		printf("## \t%s:\t%d\t%d\n", get_command_name(id), cmd.arg1, cmd.arg2);
 		
 		int error = get_executor(id)(cpu, cmd);
 		
@@ -84,5 +84,6 @@ void CPUDeInit(CPU* cpu)
 	free(cpu->code);
 	free(cpu->stack);
 	free(cpu->rstack);
+	
 	free(cpu);
 }

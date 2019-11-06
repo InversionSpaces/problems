@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "foreachmacro.h"
 #include "command.h"
@@ -104,6 +105,10 @@ DECLARE_JUMPS(
 (UN, 0xAA, {
 	JUMP_UN
 }),
+
+(NEQ, 0xFF, {
+	JUMP_IF_OP(!=)
+}), 
  
 (EQ, 0xBB, {
 	JUMP_IF_OP(==)
@@ -152,12 +157,24 @@ int get_jmp_id(const uint8_t hex)
 
 //======================================================================
 
-#define POP_PUSH_OP(OPERATION)					\
+#define POP_PUSH_FUNC(FUNCTION, VAL)			\
+stack_el_t a = 0;								\
+int error = PStackPop(cpu->stack, &a);			\
+if (error) return error;						\
+error = ! VAL(a);								\
+if (error) return error;						\
+return PStackPush(cpu->stack, (int)FUNCTION(a));
+
+#define POP_PUSH_OP(OPERATION, VAL1, VAL2)		\
 stack_el_t a = 0;								\
 stack_el_t b = 0;								\
 int error = PStackPop(cpu->stack, &a);			\
 if (error) return error;						\
+error = ! VAL1(a);								\
+if (error) return error;						\
 error = PStackPop(cpu->stack, &b);				\
+if (error) return error;						\
+error = ! VAL2(b);								\
 if (error) return error;						\
 return PStackPush(cpu->stack, a OPERATION b);
 
@@ -167,9 +184,24 @@ return CContainerAdd(container, cmd);
 
 //======================================================================
 
+#define NOVAL(x) 1
+#define NOTNULL(x) (x != 0)
+#define NONNEG(x) (x >= 0)
+
+//======================================================================
+
 #define INDEX ("INDEX", -1)
 
-DECLARE_COMMANDS(	
+DECLARE_COMMANDS(
+
+(SQRT, 0xAC, 1,	
+({
+	PUT_CMD
+}),	
+({
+	cpu->fetcher++;
+	POP_PUSH_FUNC(sqrt, NONNEG)
+})),	
 
 (PUSH, 0xFA, 3, 	
 ({
@@ -200,6 +232,7 @@ DECLARE_COMMANDS(
 		}
 		return error;
 	}
+	
 	int index = 0;
 	if (cmd.arg2 == GET_2 INDEX ) {
 		int error = PStackPop(cpu->stack, &index);
@@ -220,7 +253,8 @@ DECLARE_COMMANDS(
 	int mem_id = get_mem_id(args[1]);
 	if (mem_id >= get_not_mem_id() &&
 		mem_id != get_mem_id("OUT")) return 1;
-		
+	
+	// Bad thing for INDEX support
 	int arg2 = strcmp(args[2], GET_1 INDEX ) ? 
 				atoi(args[2]) : GET_2 INDEX ;
 				
@@ -240,6 +274,7 @@ DECLARE_COMMANDS(
 		}
 		return error;
 	}
+	
 	int index = 0;
 	if (cmd.arg2 == GET_2 INDEX ) {
 		int error = PStackPop(cpu->stack, &index);
@@ -261,7 +296,7 @@ DECLARE_COMMANDS(
 }),	
 ({
 	cpu->fetcher++;
-	POP_PUSH_OP(*)
+	POP_PUSH_OP(*, NOVAL, NOVAL)
 })),
 
 (DIV, 0xFD, 1,	
@@ -270,7 +305,7 @@ DECLARE_COMMANDS(
 }),	
 ({
 	cpu->fetcher++;
-	POP_PUSH_OP(/)
+	POP_PUSH_OP(/, NOVAL, NOTNULL)
 })),
 
 (ADD, 0xFE, 1,	
@@ -279,7 +314,7 @@ DECLARE_COMMANDS(
 }),	
 ({
 	cpu->fetcher++;
-	POP_PUSH_OP(+)
+	POP_PUSH_OP(+, NOVAL, NOVAL)
 })),
 
 (SUB, 0xFF, 1,	
@@ -288,7 +323,7 @@ DECLARE_COMMANDS(
 }),	
 ({
 	cpu->fetcher++;
-	POP_PUSH_OP(-)
+	POP_PUSH_OP(-, NOVAL, NOVAL)
 })),
 
 (LABEL, 0x00, 2, 	
