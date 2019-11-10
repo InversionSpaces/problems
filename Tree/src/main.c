@@ -26,6 +26,16 @@ int main(int argc, char* argv[])
 		
 		return error;
 	}
+    
+    FILE* dot = fopen("dump.dot", "w");
+    
+    dump_tree_dot(tree, dot);
+    
+    fclose(dot);
+    
+    purge_tree(tree);
+    
+    return 0;
 	
 	bnode* node = tree;
 	
@@ -34,7 +44,7 @@ int main(int argc, char* argv[])
 			printf("Is it %s?\n", node->data);
 			
 			char answer = 0;
-			scanf(" %c%*s", &answer);
+			scanf(" %c%*s%*c", &answer);
 			
 			if (answer == 'y') {
 				printf("I won!\n");
@@ -44,30 +54,32 @@ int main(int argc, char* argv[])
 				return 0;
 			}
 			
-			#define MAXLEN 128
-			
-			char* name = new char[MAXLEN];
-			char* question = new char[MAXLEN];
+            size_t size = 0;
+            
+			char* name = nullptr;
+            char* question = nullptr;
 			
             printf("But what is it?\n");
-			scanf(" %s", name);
+			getline(&name, &size, stdin);
+            
+            size = 0;
             
             printf("How is it different from %s?\n", node->data);
-			scanf(" %s", question);
+			getline(&question, &size, stdin);
             
             printf("Thanks for the game\n");
             
 			split_node(node, question, name);
 			
-			delete[] name;
-			delete[] question;
+			free(name);
+            free(question);
 			
 			FILE* out = fopen(argv[1], "w");
 	
-			dump(tree, out);
+			dump_tree(tree, out);
 			
 			fclose(out);
-			
+            
 			purge_tree(tree);
 			
 			return 0;

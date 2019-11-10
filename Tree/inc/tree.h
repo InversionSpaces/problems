@@ -133,20 +133,64 @@ inline int parse_tree(bnode** tree, FILE* fp)
     return 0;
 }
 
-inline int dump(const bnode* node, FILE* fp)
+inline int dump_inner_dot(const bnode* node, FILE* fp)
+{
+    assert(node);
+    assert(fp);
+    
+    if (!node->left && !node->right) {
+        fprintf(fp, "%s [shape=ellipse]\n", node->data);
+        
+        return 0;
+    }
+    
+    if (node->left && node->right) {
+        fprintf(fp, "%s [shape=box]\n", node->data);
+        
+        fprintf(fp, "%s -> %s [label=\"no\"]\n", 
+            node->data, node->left->data);
+            
+        fprintf(fp, "%s -> %s [label=\"yes\"]\n", 
+            node->data, node->right->data);
+        
+        int error = dump_inner_dot(node->left, fp);
+        if (error) return error;
+        
+        error = dump_inner_dot(node->right, fp);
+        return error;
+    }
+    
+    printf("## Error dumping to dot: only one child\n");
+    
+    return 1;
+}
+
+inline int dump_tree_dot(const bnode* tree, FILE* fp)
+{
+    assert(tree);
+    assert(fp);
+    
+    fprintf(fp, "digraph Tree {\n");
+    int error = dump_inner_dot(tree, fp);
+    fprintf(fp, "}\n");
+    
+    return error;
+}
+
+inline int dump_tree(const bnode* tree, FILE* fp)
 {	
-	if (!node) {
+	if (!tree) {
 		fprintf(fp, " nil ");
 		
 		return 0;
 	}
 	
-	fprintf(fp, " { %s ", node->data);
+	fprintf(fp, " { %s ", tree->data);
 	
-	if (node->left) dump(node->left, fp);
+	if (tree->left) dump_tree(tree->left, fp);
 	else fprintf(fp, " nil ");
 	
-	if (node->right) dump(node->right, fp);
+	if (tree->right) dump_tree(tree->right, fp);
 	else fprintf(fp, " nil ");
 	
 	fprintf(fp, " } ");
