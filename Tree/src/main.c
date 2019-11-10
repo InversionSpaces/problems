@@ -31,10 +31,10 @@ int main(int argc, char* argv[])
 		if (!node->right || !node->left) {
 			printf("Is it %s?\n", node->data);
 			
-			char c = 0;
-			scanf(" %c ", &c);
+			char answer = 0;
+			scanf(" %c%*s", &answer);
 			
-			if (c == 'y') {
+			if (answer == 'y') {
 				printf("I won!\n");
 				
 				purge(tree);
@@ -42,18 +42,20 @@ int main(int argc, char* argv[])
 				return 0;
 			}
 			
-			printf("But what is it? How is it different from %s?\n", node->data);
-			
 			#define MAXLEN 128
 			
 			char* name = new char[MAXLEN];
 			char* question = new char[MAXLEN];
 			
-			scanf("%s %s", name, question);
-			
+            printf("But what is it?\n");
+			scanf(" %s", name);
+            
+            printf("How is it different from %s?\n", node->data);
+			scanf(" %s", question);
+            
+            printf("Thanks for the game\n");
+            
 			split(node, question, name);
-			
-			printf("|%s|\n", node->data);
 			
 			delete[] name;
 			delete[] question;
@@ -71,9 +73,10 @@ int main(int argc, char* argv[])
 		else {
 			printf("%s?\n", node->data);
 			
-			int c = getchar();
+			char answer = 0;
+			scanf(" %c%*s", &answer);
 			
-			if (c == 'y') 
+			if (answer == 'y') 
 				node = node->right;
 			else
 				node = node->left;
