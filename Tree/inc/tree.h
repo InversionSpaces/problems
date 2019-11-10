@@ -17,30 +17,49 @@ struct bnode
 	bnode* right;
 };
 
-inline bnode* create_node(const char* data)
+inline char* copy_str(const char* str)
+{
+    assert(str);
+    
+    char* copy = new char[strlen(str) + 1];
+	strcpy(copy, str);
+    
+    return copy;
+}
+
+inline bnode* blank_tree()
+{
+    return nullptr;
+}
+
+inline bnode* create_node_copy(const char* data)
 {
 	assert(data);
 	
-	char* copy = new char[strlen(data) + 1];
-	strcpy(copy, data);
-	
-	return new bnode {copy, nullptr, nullptr};
+	return new bnode {copy_str(data), nullptr, nullptr};
 }
 
-inline int purge(bnode* node)
+inline bnode* create_node_from(const char* data)
 {
-	if (!node) return 0;
+    assert(data);
+    
+    return new bnode {data, nullptr, nullptr};
+}
+
+inline int purge_tree(bnode* tree)
+{
+	if (!tree) return 0;
 	
-	if (node->left) purge(node->left);
-	if (node->right) purge(node->right);
+	if (tree->left) purge_tree(tree->left);
+	if (tree->right) purge_tree(tree->right);
 	
-	delete[] node->data;
-	delete node;
+	delete[] tree->data;
+	delete tree;
 	
 	return 0;
 }
 
-inline int split(bnode* node, const char* ndata, const char* rdata)
+inline int split_node(bnode* node, const char* ndata, const char* rdata)
 {
 	assert(node);
 	assert(ndata);
@@ -48,12 +67,9 @@ inline int split(bnode* node, const char* ndata, const char* rdata)
 	
 	if (node->left || node->right) return 1;
 	
-	char* copy = new char[strlen(ndata) + 1];
-	strcpy(copy, ndata);
-	
-	node->left = new bnode {node->data, nullptr, nullptr};
-	node->data = copy;
-	node->right = create_node(rdata);
+	node->left = create_node_from(node->data);
+	node->data = copy_str(ndata);
+	node->right = create_node_copy(rdata);
 	
 	return 0;
 }
@@ -61,7 +77,7 @@ inline int split(bnode* node, const char* ndata, const char* rdata)
 inline int parse_tree(bnode** tree, FILE* fp)
 {
     assert(tree);
-    assert(file);
+    assert(fp);
     
 	int counter = 0;
 	fscanf(fp, " nil %n", &counter);
@@ -94,7 +110,7 @@ inline int parse_tree(bnode** tree, FILE* fp)
 		return 1;
 	}
 	
-	*tree = create_node(data);
+	*tree = create_node_copy(data);
 	delete[] data;
 	
 #define PARSE_CHILD(CHILD)	 					\

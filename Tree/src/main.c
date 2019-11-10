@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 	
-	bnode* tree = {};
+	bnode* tree = blank_tree();
     
     FILE* in = fopen(argv[1], "r");
 	
@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
 			if (answer == 'y') {
 				printf("I won!\n");
 				
-				purge(tree);
+				purge_tree(tree);
 				
 				return 0;
 			}
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
             
             printf("Thanks for the game\n");
             
-			split(node, question, name);
+			split_node(node, question, name);
 			
 			delete[] name;
 			delete[] question;
@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 			
 			fclose(out);
 			
-			purge(tree);
+			purge_tree(tree);
 			
 			return 0;
 		}
