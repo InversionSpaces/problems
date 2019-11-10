@@ -13,16 +13,18 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 	
-	char* str = read_file_str(argv[1]);
+	bnode* tree = {};
+    
+    FILE* in = fopen(argv[1], "r");
 	
-	bnode* tree = parse(str);
+    int error = parse_tree(&tree, in);
 	
-	free(str);
+    fclose(in);
 	
-	if (!tree) {
+	if (error) {
 		printf("## Error parsing\n");
 		
-		return 0;
+		return error;
 	}
 	
 	bnode* node = tree;

@@ -17,7 +17,7 @@ struct bnode
 	bnode* right;
 };
 
-inline bnode* create(const char* data)
+inline bnode* create_node(const char* data)
 {
 	assert(data);
 	
@@ -53,86 +53,68 @@ inline int split(bnode* node, const char* ndata, const char* rdata)
 	
 	node->left = new bnode {node->data, nullptr, nullptr};
 	node->data = copy;
-	node->right = create(rdata);
+	node->right = create_node(rdata);
 	
 	return 0;
 }
 
-inline bnode* dparse(const char* dump, int* delta)
+inline int parse_tree(bnode** tree, FILE* fp)
 {
-	int count = 0;	
-	sscanf(dump, " nil %n", &count);
+    assert(tree);
+    assert(file);
+    
+	int counter = 0;
+	fscanf(fp, " nil %n", &counter);
 	
-	if (count) {
-		*delta = count;
-		
-		return nullptr;
-	}
+	if (counter) {
+        *tree = nullptr;
+        
+        return 0;
+    }
 	
-	sscanf(dump, " { %n", &count);
+    counter = 0;
+	fscanf(fp, " { %n", &counter);
 	
-	if (!count) {
+	if (!counter) {
 		printf("## Error parsing: expected nil or { \n");
 		
-		return nullptr;
+		return 1;
 	}
 	
-	int len = 0;
 	char* data = new char[MAX_DATA_LEN + 1];
 	
-	sscanf(dump + count, " %s %n", data, &len);
+    counter = 0;
+	fscanf(fp, " %s %n", data, &counter);
 	
-	if (len > MAX_DATA_LEN) {
+	if (counter > MAX_DATA_LEN) {
 		printf("## Error parsing: too large string \n");
 		
 		delete[] data;
 		
-		return nullptr;
+		return 1;
 	}
 	
-	bnode* node = create(data);
+	*tree = create_node(data);
 	delete[] data;
 	
-	count += len;
-	
-	int cdelta = 0;
-	
-#define PARSE_CHILD(CHILD)							\
-	cdelta = 0;										\
-	node->CHILD = dparse(dump + count, &cdelta);	\
-	if (!cdelta) {									\
-		*delta = 0;									\
-		purge(node);								\
-		return nullptr;								\
-	}												\
-	count += cdelta;							
-	
+#define PARSE_CHILD(CHILD)	 					\
+	error = parse_tree(&((*tree)->CHILD), fp);	\
+	if (error) return error; 					\
+    
+    int error = 0;
 	PARSE_CHILD(left)
 	PARSE_CHILD(right)
 	
-	int tmp = 0;
-	sscanf(dump + count, " } %n", &tmp);
+	counter = 0;
+	fscanf(fp, " } %n", &counter);
 	
-	if (!tmp) {
+	if (!counter) {
 		printf("## Error parsing: expected } \n");
 		
-		purge(node);
-		
-		return 0;
+		return 2;
 	}
-	
-	count += tmp;
-	
-	*delta = count;
-	
-	return node;
-}
 
-inline bnode* parse(const char* dump)
-{
-	int dummy = 0;
-	
-	return dparse(dump, &dummy);
+    return 0;
 }
 
 inline int dump(const bnode* node, FILE* fp)
