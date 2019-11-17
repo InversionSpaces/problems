@@ -37,11 +37,13 @@ int play_akinator(bnode* tree)
 			
             printf("## But what is it?\n");
 			getline(&name, &size, stdin);
+			name[strlen(name) - 1] = 0;
             
             size = 0;
             
             printf("## How is it different from %s?\n", node->data);
 			getline(&question, &size, stdin);
+			question[strlen(question) - 1] = 0;
             
             printf("## Thanks for the game\n");
             
@@ -53,15 +55,24 @@ int play_akinator(bnode* tree)
 			return 1;
 		}
 		else {
-			printf("## %s?\n", node->data);
+			printf("## %s? [y/n]\n", node->data);
 			
-			char answer = 0;
-			scanf(" %c%*[^\n]s\n", &answer);
-			
-			if (answer == 'y') 
-				node = node->right;
-			else
-				node = node->left;
+			while (1) {
+				char answer = 0;
+				scanf(" %c%*[^\n]s\n", &answer);
+				
+				if (answer == 'y') { 
+					node = node->right;
+					break;
+				}
+				else if (answer == 'n') {
+					node = node->left;
+					break;
+				}
+				
+				printf("## Unrecognized choice\n");
+				printf("## Try again [y/n]\n");
+			}
 		}
 	}
 }
@@ -76,6 +87,7 @@ int get_tree(bnode** tree, const char* file)
 	if (!in) return 1;
 	
     int error = parse_tree(tree, in);
+	if (error) purge_tree(*tree);
 	
     fclose(in);
     
@@ -260,8 +272,16 @@ int dump(bnode* tree)
 	size_t n = 0;
 	
 	getline(&str, &n, stdin);
+	str[strlen(str) - 1] = 0;
 	
-	return dump_as_dot(tree, str);
+	int err = dump_as_dot(tree, str);
+	
+	if (err) printf("## Error dumping\n");
+	else printf("## Dumped to %s\n", str);
+	
+	free(str);
+	
+	return err;
 }
 
 int play(bnode* tree, const char* fname)
@@ -299,6 +319,7 @@ int main(int argc, char* argv[])
 	int working = 1;
 	
 	while (working) {
+		printf("####################################\n");
 		printf("## What do you want to do?\n");
 		printf("## [p]lay akinator\n");
 		printf("## [c]haracterise some object\n");
@@ -306,6 +327,7 @@ int main(int argc, char* argv[])
 		printf("## [l]ist all objects in a tree\n");
 		printf("## [d]ump tree as dot\n");
 		printf("## [e]xit\n");
+		printf("####################################\n");
 		
 		char answer = 0;
 		scanf("	%c", &answer);

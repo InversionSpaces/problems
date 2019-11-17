@@ -7,7 +7,7 @@
 
 using namespace std;
 
-#define MAX_DATA_LEN 64
+#define MAX_DATA_LEN 128
 
 struct bnode 
 {
@@ -93,23 +93,16 @@ inline int parse_tree(bnode** tree, FILE* fp)
 	
 	if (!counter) return 1;
 	
-	char* data = new char[MAX_DATA_LEN + 1];
+	char data[MAX_DATA_LEN + 1];
 	
     counter = 0;
-	fscanf(fp, " %s %n", data, &counter); // FIXME: MEMORY CORRUPTION
-	
-	if (counter > MAX_DATA_LEN) {
-		delete[] data;
-		
-		return 1;
-	}
+	fscanf(fp, " \"%[^\"]\" %n", data, &counter); // FIXME: MEMORY CORRUPTION
 	
 	*tree = create_node_copy(data);
-	delete[] data;
 	
 #define PARSE_CHILD(CHILD)	 					\
 	error = parse_tree(&((*tree)->CHILD), fp);	\
-	if (error) return error; 					\
+	if (error) return error;
     
     int error = 0;
 	PARSE_CHILD(left)
@@ -129,19 +122,21 @@ inline int dump_inner_dot(const bnode* node, FILE* fp)
     assert(fp);
     
     if (!node->left && !node->right) {
-        fprintf(fp, "%s [shape=ellipse]\n", node->data);
+        fprintf(fp, "NODE%p [shape=ellipse label=\"%s\"]\n", 
+			node, node->data);
         
         return 0;
     }
     
     if (node->left && node->right) {
-        fprintf(fp, "%s [shape=box]\n", node->data);
+        fprintf(fp, "NODE%p [shape=box label=\"%s\"]\n", 
+			node, node->data);
         
-        fprintf(fp, "%s -> %s [label=\"no\"]\n", 
-            node->data, node->left->data);
+        fprintf(fp, "NODE%p -> NODE%p [label=\"no\"]\n", 
+            node, node->left);
             
-        fprintf(fp, "%s -> %s [label=\"yes\"]\n", 
-            node->data, node->right->data);
+        fprintf(fp, "NODE%p -> NODE%p [label=\"yes\"]\n", 
+            node, node->right);
         
         int error = dump_inner_dot(node->left, fp);
         if (error) return error;
@@ -173,7 +168,7 @@ inline int dump_tree(const bnode* tree, FILE* fp)
 		return 0;
 	}
 	
-	fprintf(fp, " { %s ", tree->data);
+	fprintf(fp, " { \"%s\" ", tree->data);
 	
 	if (tree->left) dump_tree(tree->left, fp);
 	else fprintf(fp, " nil ");
