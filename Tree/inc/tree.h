@@ -91,20 +91,14 @@ inline int parse_tree(bnode** tree, FILE* fp)
     counter = 0;
 	fscanf(fp, " { %n", &counter);
 	
-	if (!counter) {
-		printf("## Error parsing: expected nil or { \n");
-		
-		return 1;
-	}
+	if (!counter) return 1;
 	
 	char* data = new char[MAX_DATA_LEN + 1];
 	
     counter = 0;
-	fscanf(fp, " %s %n", data, &counter);
+	fscanf(fp, " %s %n", data, &counter); // FIXME: MEMORY CORRUPTION
 	
 	if (counter > MAX_DATA_LEN) {
-		printf("## Error parsing: too large string \n");
-		
 		delete[] data;
 		
 		return 1;
@@ -124,11 +118,7 @@ inline int parse_tree(bnode** tree, FILE* fp)
 	counter = 0;
 	fscanf(fp, " } %n", &counter);
 	
-	if (!counter) {
-		printf("## Error parsing: expected } \n");
-		
-		return 2;
-	}
+	if (!counter) return 2;
 
     return 0;
 }
@@ -159,8 +149,6 @@ inline int dump_inner_dot(const bnode* node, FILE* fp)
         error = dump_inner_dot(node->right, fp);
         return error;
     }
-    
-    printf("## Error dumping to dot: only one child\n");
     
     return 1;
 }
@@ -196,6 +184,65 @@ inline int dump_tree(const bnode* tree, FILE* fp)
 	fprintf(fp, " } ");
 	
 	return 0;
+}
+
+struct bn_entry
+{
+	int positive;
+	
+	bnode* data;
+	
+	bn_entry* next;
+};
+
+inline int get_path(bnode* tree, const char* data, bn_entry** path)
+{
+	assert(data);
+	
+	if (!tree) return 0;
+	
+	if (strcmp(tree->data, data) == 0) {
+		*path = new bn_entry {-1, tree, nullptr};
+		
+		return 1;
+	}
+	
+	bn_entry* dpath = nullptr;
+	
+	if (get_path(tree->left, data, &dpath)) {
+		*path = new bn_entry {0, tree, dpath};
+		
+		return 1;
+	}
+	
+	if (get_path(tree->right, data, &dpath)) {
+		*path = new bn_entry {1, tree, dpath};
+		
+		return 1;
+	}
+	
+	return 0;
+}
+
+inline int get_objects(bnode* tree, bn_entry** objs)
+{
+	assert(tree);
+	assert(objs);
+	
+	if (!tree->left && !tree->right) {
+		*objs = new bn_entry {0, tree, nullptr};
+		
+		return 1;
+	}
+	
+	get_objects(tree->left, objs);
+	
+	bn_entry* end = *objs;
+	while (end->next) end = end->next;
+	
+	get_objects(tree->right, &(end->next));
+	
+	return 1;
 }
 
 
