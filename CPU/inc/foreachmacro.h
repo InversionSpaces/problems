@@ -13,10 +13,12 @@
 #define FOR_EACH_11(what, x, ...) what x FOR_EACH_10(what, __VA_ARGS__)
 #define FOR_EACH_12(what, x, ...) what x FOR_EACH_11(what, __VA_ARGS__)
 #define FOR_EACH_13(what, x, ...) what x FOR_EACH_12(what, __VA_ARGS__)
+#define FOR_EACH_14(what, x, ...) what x FOR_EACH_13(what, __VA_ARGS__)
+#define FOR_EACH_15(what, x, ...) what x FOR_EACH_14(what, __VA_ARGS__)
 
-#define NTH_ARG(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _N, ...) _N
+#define NTH_ARG(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _N, ...) _N
 
-#define FOR_EACH(what, ...) NTH_ARG(__VA_ARGS__, FOR_EACH_13, FOR_EACH_12, FOR_EACH_11, FOR_EACH_10, FOR_EACH_9, FOR_EACH_8, FOR_EACH_7, FOR_EACH_6, FOR_EACH_5, FOR_EACH_4, FOR_EACH_3,FOR_EACH_2, FOR_EACH_1)(what, __VA_ARGS__)
+#define FOR_EACH(what, ...) NTH_ARG(__VA_ARGS__, FOR_EACH_15, FOR_EACH_14, FOR_EACH_13, FOR_EACH_12, FOR_EACH_11, FOR_EACH_10, FOR_EACH_9, FOR_EACH_8, FOR_EACH_7, FOR_EACH_6, FOR_EACH_5, FOR_EACH_4, FOR_EACH_3,FOR_EACH_2, FOR_EACH_1)(what, __VA_ARGS__)
 
 #define GET_1(x, ...) x
 #define GET_2(x, ...) GET_1(__VA_ARGS__)

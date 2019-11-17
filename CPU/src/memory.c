@@ -42,6 +42,7 @@ stack_el_t* get_mem_loc(Memory* mem, int mem_id)			\
 
 DECLARE_MEMORY(	
 		(LOCAL, 128), 
+		(REGISTER, 128),
 		(GLOBAL, 128),
 		(MEMORY, 1024)
 	)

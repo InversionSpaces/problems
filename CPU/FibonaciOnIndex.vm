@@ -1,0 +1,136 @@
+PUSH IN 1
+
+; Init LOCAL offset
+PUSH CONSTANT 0
+POP REGISTER 0
+; -----------------
+
+CALL FIBONACCI
+
+JUMP UN END
+
+; Fibonacci
+LABEL FIBONACCI
+	; LOCAL[0] = arg
+	PUSH CONSTANT 0
+	PUSH REGISTER 0
+	ADD
+	
+	POP LOCAL INDEX 
+	; --------------
+	
+	; arg - 1 on stack
+	PUSH CONSTANT 1
+	
+	PUSH CONSTANT 0
+	PUSH REGISTER 0
+	ADD
+	
+	PUSH LOCAL INDEX
+	
+	SUB
+	; --------------
+	
+	; If arg == 0 or arg == 1
+	JUMP LEQ FIBONACCI_BASE
+	
+	; arg - 1 on stack
+	PUSH CONSTANT 1
+	
+	PUSH CONSTANT 0
+	PUSH REGISTER 0
+	ADD
+	
+	PUSH LOCAL INDEX
+	
+	SUB 
+	; --------------
+	
+	; Call preporation - increment offset
+	PUSH CONSTANT 3
+	PUSH REGISTER 0
+	ADD
+	POP REGISTER 0
+	; --------------
+	
+	; Call
+	CALL FIBONACCI
+	
+	; After call - decrement offset
+	PUSH CONSTANT 3
+	PUSH REGISTER 0
+	SUB
+	POP REGISTER 0
+	; --------------
+	
+	; LOCAL[1] = fib(arg - 1)
+	PUSH CONSTANT 1
+	PUSH REGISTER 0
+	ADD
+	
+	POP LOCAL INDEX
+	; --------------
+	
+	; arg - 2 on stack
+	PUSH CONSTANT 2
+	
+	PUSH CONSTANT 0
+	PUSH REGISTER 0
+	ADD
+	
+	PUSH LOCAL INDEX
+	
+	SUB 
+	; --------------
+		
+	; Call preporation - increment offset
+	PUSH CONSTANT 3
+	PUSH REGISTER 0
+	ADD
+	POP REGISTER 0
+	; --------------
+	
+	; Call
+	CALL FIBONACCI
+	
+	; After call - decrement offset
+	PUSH CONSTANT 3
+	PUSH REGISTER 0
+	SUB
+	POP REGISTER 0
+	; --------------
+	
+	; --------------
+	PUSH CONSTANT 2
+	PUSH REGISTER 0
+	ADD
+	
+	POP LOCAL INDEX
+	; LOCAL[2] = fib(arg - 2)
+	
+	; LOCAL[1] + LOCAL[2] on stack
+	PUSH CONSTANT 1
+	PUSH REGISTER 0
+	ADD
+	
+	PUSH LOCAL INDEX
+	
+	PUSH CONSTANT 2
+	PUSH REGISTER 0
+	ADD
+	
+	PUSH LOCAL INDEX
+	
+	ADD
+	; --------------
+RETURN
+
+LABEL FIBONACCI_BASE
+	PUSH CONSTANT 1
+RETURN
+
+; Fibonnaci end
+
+LABEL END
+
+POP OUT 1
