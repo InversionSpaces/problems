@@ -1,6 +1,6 @@
 struct token
 {
-	int is_num;
+	int is_num:1, is_var:1;
 	
 	union 
 	{
@@ -64,7 +64,7 @@ int purge_expr(expr* ex)
 	return 0;
 }
 
-const char* tokens[] = { "(", ")", "+", "-", "*", "**", "/", "sin", "cos" };
+const char* tokens[] = { "(", ")", "+", "-", "*", "^", "/", "sin", "cos" };
 
 #define SIZE(x) (sizeof(x) / sizeof(0[x]))
 
@@ -76,22 +76,23 @@ struct parse_data
 	size_t nvars;
 };
 
-void print_expr(const expr* ex)
-{	
-	if (ex->val.is_num)
-		printf(" %lf", ex->val.num);
-	else
-		printf(" %s", ex->val.str);
-	
-	if (ex->arg1 && ex->arg2) {	
-		printf("( ");
-		print_expr(ex->arg1);
-		print_expr(ex->arg2);
-		printf(" )");
-	}
-} 
-
 int parse(parse_data* pd, expr** ex);
+
+int find_in_array(parse_data* pd, token* tk, const char** arr, size_t n)
+{
+	for (size_t i = 0; i < n; ++i) {
+		size_t len = strlen(arr[i]);
+		if (strncmp(arr[i], pd->input, len) == 0) {
+			pd->input += len;
+			
+			(*tk).str = arr[i];
+			
+			return 1;
+		}
+	}
+	
+	return 0;
+}
 
 int parse_token(parse_data* pd, token* tk)
 {
@@ -112,21 +113,25 @@ int parse_token(parse_data* pd, token* tk)
 		pd->input += n;
 		
 		(*tk).is_num = 1;
+		(*tk).is_var = 0;
+		
 		(*tk).num = num;
 		
 		return 1;
 	}
 	
-	for (size_t i = 0; i < SIZE(tokens); ++i) {
-		size_t len = strlen(tokens[i]);
-		if (strncmp(tokens[i], pd->input, len) == 0) {
-			pd->input += len;
-			
-			(*tk).is_num = 0;
-			(*tk).str = tokens[i];
-			
-			return 1;
-		}
+	if (find_in_array(pd, tk, tokens, SIZE(tokens))) {
+		(*tk).is_num = 0;
+		(*tk).is_var = 0;
+		
+		return 1;
+	}
+	
+	if (find_in_array(pd, tk, pd->vars, pd->nvars)) {
+		(*tk).is_num = 0;
+		(*tk).is_var = 1;
+		
+		return 1;
 	}
 	
 	return 0;
@@ -142,7 +147,7 @@ int parse_expr(parse_data* pd, expr** ex)
 	if (!parse_token(pd, &tk)) 
 		return 0;
 	
-	if (tk.is_num) {
+	if (tk.is_num || tk.is_var) {
 		*ex = new expr {tk, nullptr, nullptr};
 		
 		return 1;
@@ -180,6 +185,7 @@ inline int op_priority(const token* op)
 	if (strcmp(op->str, "-") == 0) return 1;
 	if (strcmp(op->str, "*") == 0) return 2;
 	if (strcmp(op->str, "/") == 0) return 2;
+	if (strcmp(op->str, "^") == 0) return 3;
 	
 	return 0; // For "(" and ")"
 }
