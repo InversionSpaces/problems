@@ -1,11 +1,19 @@
+enum token_type
+{
+	VAR,
+	FUNC,
+	TOKEN,
+	NUM
+};
+
 struct token
 {
-	int is_num:1, is_var:1;
+	token_type type;
 	
 	union 
 	{
+		int id;
 		double num;
-		const char* str;
 	};
 };
 
@@ -17,15 +25,57 @@ struct expr
 	expr* arg2;
 };
 
+#define SIZE(x) (sizeof(x) / sizeof(0[x]))
+
+const char* tokens[] = {"(", ")"};
+const char* functions[] = { "+", "-", "*", 
+							"^", "/", "sin", 
+							"cos", "tg", "sh", 
+							"ch", "abs" };
+
+inline int get_token_id(const char* str)
+{
+	for (int i = 0; i < SIZE(tokens); ++i)
+		if (strcmp(str, tokens[i]) == 0) return i;
+	
+	return -1;
+}
+
+inline int get_function_id(const char* str)
+{
+	for (int i = 0; i < SIZE(functions); ++i)
+		if (strcmp(str, functions[i]) == 0) return i;
+	
+	return -1;
+}
+
+struct parse_data
+{
+	const char* input;
+	
+	const char** vars;
+	size_t nvars;
+};
+
 inline int dump_inner_dot(const expr* ex, FILE* fp)
 {
     assert(ex);
     assert(fp);
     
-	if (ex->val.is_num)
-		fprintf(fp, "NODE%p [shape=ellipse label=\"%lf\"]\n", ex, ex->val.num);
-	else 
-		fprintf(fp, "NODE%p [shape=ellipse label=\"%s\"]\n", ex, ex->val.str);
+	switch (ex->val.type) {
+		case TOKEN:
+			fprintf(fp, "NODE%p [shape=ellipse label=\"%s\"]\n", 
+				ex, tokens[ex->val.id]);
+		break;
+		case FUNC:
+			fprintf(fp, "NODE%p [shape=ellipse label=\"%s\"]\n", 
+				ex, functions[ex->val.id]);
+		break;
+		case NUM:
+			fprintf(fp, "NODE%p [shape=ellipse label=\"%lf\"]\n", 
+				ex, ex->val.num);
+		break;
+	}
     
     if (ex->arg1) {
         fprintf(fp, "NODE%p -> NODE%p\n", ex, ex->arg1);
@@ -64,18 +114,6 @@ int purge_expr(expr* ex)
 	return 0;
 }
 
-const char* tokens[] = { "(", ")", "+", "-", "*", "^", "/", "sin", "cos" };
-
-#define SIZE(x) (sizeof(x) / sizeof(0[x]))
-
-struct parse_data
-{
-	const char* input;
-	
-	const char** vars;
-	size_t nvars;
-};
-
 int parse(parse_data* pd, expr** ex);
 
 int find_in_array(parse_data* pd, token* tk, const char** arr, size_t n)
@@ -85,7 +123,7 @@ int find_in_array(parse_data* pd, token* tk, const char** arr, size_t n)
 		if (strncmp(arr[i], pd->input, len) == 0) {
 			pd->input += len;
 			
-			(*tk).str = arr[i];
+			tk->id = i;
 			
 			return 1;
 		}
@@ -111,25 +149,27 @@ int parse_token(parse_data* pd, token* tk)
 	
 	if (res) {
 		pd->input += n;
+		tk->type = NUM;
+		tk->num = num;
 		
-		(*tk).is_num = 1;
-		(*tk).is_var = 0;
-		
-		(*tk).num = num;
+		return 1;
+	}
+	
+	
+	if (find_in_array(pd, tk, functions, SIZE(functions))) {
+		tk->type = FUNC;
 		
 		return 1;
 	}
 	
 	if (find_in_array(pd, tk, tokens, SIZE(tokens))) {
-		(*tk).is_num = 0;
-		(*tk).is_var = 0;
+		tk->type = TOKEN;
 		
 		return 1;
 	}
 	
 	if (find_in_array(pd, tk, pd->vars, pd->nvars)) {
-		(*tk).is_num = 0;
-		(*tk).is_var = 1;
+		tk->type = VAR;
 		
 		return 1;
 	}
@@ -147,21 +187,21 @@ int parse_expr(parse_data* pd, expr** ex)
 	if (!parse_token(pd, &tk)) 
 		return 0;
 	
-	if (tk.is_num || tk.is_var) {
+	if (tk.type == NUM || tk.type == VAR) {
 		*ex = new expr {tk, nullptr, nullptr};
 		
 		return 1;
 	}
 	
 	// Parse expr in brackets
-	if (strcmp(tk.str, "(") == 0) {
+	if (tk.type == TOKEN && tk.id == 0) { // "(" id
 		if (!parse(pd, ex)) 
 			return 0;
 			
 		if (!parse_token(pd, &tk)) 
 			return 0;
 			
-		if (strcmp(tk.str, ")") != 0) 
+		if (tk.type != TOKEN || tk.id != 1) // ")" id 
 			return 0;
 		
 		return 1;
@@ -181,13 +221,15 @@ int parse_expr(parse_data* pd, expr** ex)
 
 inline int op_priority(const token* op)
 {
-	if (strcmp(op->str, "+") == 0) return 1;
-	if (strcmp(op->str, "-") == 0) return 1;
-	if (strcmp(op->str, "*") == 0) return 2;
-	if (strcmp(op->str, "/") == 0) return 2;
-	if (strcmp(op->str, "^") == 0) return 3;
+	if (op->type == FUNC) {
+		if (op->id == get_function_id("+")) return 1;
+		if (op->id == get_function_id("-")) return 1;
+		if (op->id == get_function_id("*")) return 2;
+		if (op->id == get_function_id("/")) return 2;
+		if (op->id == get_function_id("^")) return 3;
+	}
 	
-	return 0; // For "(" and ")"
+	return 0; // For tokens
 }
 
 int parse_bin_expr(parse_data* pd, expr** ex, int mpriority)
@@ -215,7 +257,7 @@ int parse_bin_expr(parse_data* pd, expr** ex, int mpriority)
 		// "(" or ")" will be dropped here too
 		// This is not obvious
 		if (priority <= mpriority) { 
-			pd->input -= strlen(op.str);
+			pd->input -= strlen(op.type == TOKEN ? tokens[op.id] : functions[op.id]);
 			
 			return 1;
 		}
