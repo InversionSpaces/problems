@@ -1,14 +1,15 @@
 #pragma once
 
 #include <iostream>
+#include <string>
 #include <cstdio>
 #include <vector>
 
 using namespace std;
 
-const vector<const char*> tokens = {"(", ")"};
+const vector<string> tokens = {"(", ")"};
 	
-const vector<const char*> functions = { 
+const vector<string> functions = { 
 	"+", "-", "*", "^", "/", "sin", 
 	"cos", "tg", "sh", "ch", "abs" 
 };
@@ -40,33 +41,38 @@ struct expr_t
 	expr_t* arg2;
 };
 
+void purge_expr(expr_t* ex)
+{
+	if (ex->arg1) purge_expr(ex->arg1);
+	if (ex->arg2) purge_expr(ex->arg2);
+	
+	delete ex;
+}
+
 class Expression
 {
 private:
 	expr_t* root;
-	
-	void purge_expr(expr_t* ex)
-	{
-		if (ex->arg1) purge_expr(ex->arg1);
-		if (ex->arg2) purge_expr(ex->arg2);
-		
-		delete ex;
-	}
+	const vector<string> vars;
 	
 	inline void dump_inner(const expr_t* ex, FILE* fp)
 	{
 		switch (ex->val.type) {
 			case TOKEN:
 				fprintf(fp, "NODE%p [shape=ellipse label=\"%s\"]\n", 
-					ex, tokens[ex->val.id]);
+					ex, tokens[ex->val.id].c_str());
 			break;
 			case FUNC:
 				fprintf(fp, "NODE%p [shape=ellipse label=\"%s\"]\n", 
-					ex, functions[ex->val.id]);
+					ex, functions[ex->val.id].c_str());
 			break;
 			case NUM:
 				fprintf(fp, "NODE%p [shape=ellipse label=\"%lf\"]\n", 
 					ex, ex->val.num);
+			break;
+			case VAR:
+				fprintf(fp, "NODE%p [shape=ellipse label=\"%s\"]\n", 
+					ex, vars[ex->val.id].c_str());
 			break;
 		}
 		
@@ -82,8 +88,9 @@ private:
 	}
 	
 public:
-	Expression(expr_t* root) :
-	root(root)
+	Expression(expr_t* root, const vector<string>& vars) :
+	root(root),
+	vars(vars)
 	{
 	}
 	

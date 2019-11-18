@@ -3,6 +3,7 @@
 #include <iostream>
 #include <optional>
 #include <vector>
+#include <string>
 
 #include "expression.hpp"
 
@@ -13,12 +14,24 @@ class Parser
 private:
 	const char* input;
 	
-	vector<const char*> vars;
+	vector<string> vars;
+	
+	inline int get_token_len(const token_t& tk)
+	{
+		switch (tk.type) {
+			case TOKEN:
+				return tokens[tk.id].size();
+			case FUNC:
+				return functions[tk.id].size();
+			case VAR:
+				return vars[tk.id].size();
+		}
+	}
 
 	inline optional<int> get_token_id(const char* str)
 	{
 		for (int i = 0; i < tokens.size(); ++i)
-			if (strcmp(str, tokens[i]) == 0) return i;
+			if (str == tokens[i]) return i;
 		
 		return nullopt;
 	}
@@ -26,16 +39,16 @@ private:
 	inline optional<int> get_function_id(const char* str)
 	{
 		for (int i = 0; i < functions.size(); ++i)
-			if (strcmp(str, functions[i]) == 0) return i;
+			if (str == functions[i]) return i;
 		
 		return nullopt;
 	}
 
-	inline optional<int> find_in_array(vector<const char*> arr)
+	inline optional<int> find_in_array(vector<string> arr)
 	{
 		for (int i = 0; i < arr.size(); ++i) {
-			int len = strlen(arr[i]);
-			if (strncmp(arr[i], input, len) == 0) {
+			int len = arr[i].size();
+			if (strncmp(arr[i].c_str(), input, len) == 0) {
 				input += len;
 				
 				return i;
@@ -93,7 +106,7 @@ if (auto i = find_in_array(arr)) {	\
 		}
 		
 		// Parse expr in brackets
-		if (tk->type == TOKEN && tk->id == 0) { // "(" id
+		if (tk->type == TOKEN && tk->id == get_token_id("(")) {
 			auto ex = parse();
 			if (!ex) 
 				return nullopt;
@@ -102,7 +115,7 @@ if (auto i = find_in_array(arr)) {	\
 			if (!tk) 
 				return nullopt;
 				
-			if (tk->type != TOKEN || tk->id != 1) // ")" id 
+			if (tk->type != TOKEN || tk->id != get_token_id(")")) 
 				return nullopt;
 			
 			return ex;
@@ -152,17 +165,17 @@ if (auto i = find_in_array(arr)) {	\
 			// "(" or ")" will be dropped here too
 			// This is not obvious
 			if (priority <= mpriority) { 
-				input -= strlen(
-					op->type == TOKEN ? 
-						tokens[op->id] : functions[op->id]
-				);
+				input -= get_token_len(*op);
 				
 				return left;
 			}
 			
 			auto right = parse_bin_expr(priority);
-			if (!right)
+			if (!right) {
+				purge_expr(*left);
+				
 				return nullopt;
+			}
 			
 			left = new expr_t {*op, *left, *right};
 		}
@@ -184,11 +197,16 @@ public:
 		auto ex = parse();
 		if (!ex) return nullopt;
 		
-		return new Expression(*ex);
+		return new Expression(*ex, move(vars));
 	}
 	
 	void reset(const char* str)
 	{
 		input = str;
+	}
+
+	void add_var(const char* str)
+	{
+		vars.emplace_back(str);
 	}
 };
