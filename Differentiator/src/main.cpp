@@ -3,23 +3,20 @@
 #include <cassert>
 #include <cctype>
 
-#include <tree.hpp>
+//#include <tree.hpp>
+#include "expression.hpp"
+#include "parser.hpp"
+
 
 using namespace std;
 
 int main()
 {
-	const char* vars[] = {"x", "delta"};
-	parse_data pd = {"1 + 2 * sin(3) * cos(5 - 4)", vars, SIZE(vars)};
-	expr* ex = nullptr;
+	Parser p("1 + 2 + sin(1) / cos( 5 * 8 )");
 	
-	parse(&pd, &ex);
+	auto ex = p.process();
 	
-	FILE* out = fopen("dif.dot", "w");
+	(*ex)->dump("dif.dot");
 	
-	dump_expr_dot(ex, out);
-	
-	fclose(out);
-	
-	purge_expr(ex);
+	delete *ex;
 }
