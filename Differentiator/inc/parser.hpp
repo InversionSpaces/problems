@@ -4,6 +4,7 @@
 #include <optional>
 #include <vector>
 #include <string>
+#include <exception>
 
 #include "expression.hpp"
 
@@ -25,6 +26,9 @@ private:
 				return functions[tk.id].size();
 			case VAR:
 				return vars[tk.id].size();
+			default:
+				throw invalid_argument("Can't get len of token");
+				break;
 		}
 	}
 
@@ -60,9 +64,9 @@ private:
 
 	inline optional<token_t> parse_token()
 	{		
-		if (*input == 0) return nullopt;
-		
 		while (isspace(*input)) input++;
+		
+		if (*input == 0) return nullopt;
 		
 		double num = 0;
 		int n = 0;
@@ -141,7 +145,7 @@ if (auto i = find_in_array(arr)) {	\
 			if (op.id == get_function_id("^")) return 3;
 		}
 		
-		return 0; // For tokens
+		return 0; // For tokens, functions and nums
 	}
 
 	inline optional<expr_t*> parse_bin_expr(int mpriority)
@@ -164,7 +168,7 @@ if (auto i = find_in_array(arr)) {	\
 			
 			// "(" or ")" will be dropped here too
 			// This is not obvious
-			if (priority <= mpriority) { 
+			if (priority <= mpriority) {
 				input -= get_token_len(*op);
 				
 				return left;

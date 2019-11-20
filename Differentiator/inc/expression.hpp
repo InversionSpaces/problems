@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdio>
 #include <vector>
+#include <cmath>
 
 using namespace std;
 
@@ -11,7 +12,8 @@ const vector<string> tokens = {"(", ")"};
 	
 const vector<string> functions = { 
 	"+", "-", "*", "^", "/", "sin", 
-	"cos", "tg", "sh", "ch", "abs" 
+	"cos", "tan", "sinh", "cosh", "abs", 
+	"log", "log10", "exp"
 };
 
 enum toktype_t
@@ -49,11 +51,143 @@ void purge_expr(expr_t* ex)
 	delete ex;
 }
 
+inline int reduce_expr(expr_t* ex)
+{
+	assert(ex);
+	
+	if (ex->val.type == NUM) return 1;
+	if (ex->val.type == VAR) return 0;
+	
+	int reduced = 1;
+	if (ex->arg1) reduced = reduce_expr(ex->arg1) && reduced;
+	if (ex->arg2) reduced = reduce_expr(ex->arg2) && reduced;
+	
+	string name = functions[ex->val.id];
+	
+	if (!reduced) return 0;
+	
+#define PLUS_MINUS(SIGN)										\
+if (name == #SIGN) {											\
+	double res = 0;												\
+	if (ex->arg1 && ex->arg2) {									\
+		res = ex->arg1->val.num SIGN ex->arg2->val.num;			\
+		purge_expr(ex->arg1);									\
+		purge_expr(ex->arg2);									\
+		ex->arg1 = nullptr;										\
+		ex->arg2 = nullptr;										\
+	}															\
+	else {														\
+		res = SIGN ex->arg1->val.num;							\
+		purge_expr(ex->arg1);									\
+		ex->arg1 = nullptr;										\
+	}															\
+	ex->val.type = NUM;											\
+	ex->val.num = res;											\
+	return 1;													\
+}
+
+	PLUS_MINUS(-)
+	PLUS_MINUS(+)
+	
+	if (name == "*") {
+		double res = ex->arg1->val.num * ex->arg2->val.num;
+			
+		purge_expr(ex->arg1);
+		purge_expr(ex->arg2);
+		
+		ex->arg1 = nullptr;
+		ex->arg2 = nullptr;
+		
+		ex->val.type = NUM;
+		ex->val.num = res;
+		
+		return 1;
+	}
+	
+	if (name == "/") {
+		double res = ex->arg1->val.num / ex->arg2->val.num;
+			
+		purge_expr(ex->arg1);
+		purge_expr(ex->arg2);
+		
+		ex->arg1 = nullptr;
+		ex->arg2 = nullptr;
+		
+		ex->val.type = NUM;
+		ex->val.num = res;
+		
+		return 1;
+	}
+	
+	if (name == "^") {
+		double res = pow(ex->arg1->val.num, ex->arg2->val.num);
+			
+		purge_expr(ex->arg1);
+		purge_expr(ex->arg2);
+		
+		ex->arg1 = nullptr;
+		ex->arg2 = nullptr;
+		
+		ex->val.type = NUM;
+		ex->val.num = res;
+		
+		return 1;
+	}
+	
+#define MATH_FUNC(FUNC)						\
+if (name == #FUNC) {						\
+	double res = FUNC(ex->arg1->val.num);	\
+	purge_expr(ex->arg1);					\
+	ex->arg1 = nullptr;						\
+	ex->val.type = NUM;						\
+	ex->val.num = res;						\
+	return 1;								\
+}
+	
+	MATH_FUNC(sin)
+	MATH_FUNC(cos)
+	MATH_FUNC(sinh)
+	MATH_FUNC(cosh)
+	MATH_FUNC(tan)
+	MATH_FUNC(tanh)
+	MATH_FUNC(abs)
+	MATH_FUNC(exp)
+	MATH_FUNC(log)
+	MATH_FUNC(log10)
+	
+	return 0;
+}
+
+expr_t* copy_expr(const expr_t* ex)
+{
+	if (ex == nullptr) return nullptr;
+	
+	expr_t* retval = new expr_t(*ex);
+	
+	retval->arg1 = ex->arg1 ? copy_expr(ex->arg1) : nullptr;
+	retval->arg2 = ex->arg2 ? copy_expr(ex->arg2) : nullptr;
+	
+	return retval;
+}
+
 class Expression
 {
 private:
 	expr_t* root;
 	const vector<string> vars;
+	
+public:
+	Expression(const Expression& other) :
+	vars(other.vars),
+	root(copy_expr(other.root))
+	{
+	}
+
+	Expression(expr_t* root, const vector<string>& vars) :
+	root(root),
+	vars(vars)
+	{
+	}
 	
 	inline void dump_inner(const expr_t* ex, FILE* fp)
 	{
@@ -87,13 +221,6 @@ private:
 		}
 	}
 	
-public:
-	Expression(expr_t* root, const vector<string>& vars) :
-	root(root),
-	vars(vars)
-	{
-	}
-	
 	int dump(const char* filename) 
 	{
 		FILE* fp = fopen(filename, "w");
@@ -107,6 +234,16 @@ public:
 		fclose(fp);
 		
 		return 1;
+	}
+	
+	int reduce()
+	{
+		return reduce_expr(root);
+	}
+	
+	Expression* derivative()
+	{
+		
 	}
 	
 	~Expression()

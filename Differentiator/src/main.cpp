@@ -6,12 +6,11 @@
 #include "expression.hpp"
 #include "parser.hpp"
 
-
 using namespace std;
 
 int main()
 {
-	Parser p("1 + 2 + sin(1) / cos( 5 * 8 * x * y )");
+	Parser p(" sin(cos(tan(x ^ x))) ");
 	p.add_var("x");
 	p.add_var("y");
 	
@@ -23,6 +22,7 @@ int main()
 		return 0;
 	}
 	
+	(*ex)->reduce();
 	(*ex)->dump("dif.dot");
 	
 	delete *ex;
