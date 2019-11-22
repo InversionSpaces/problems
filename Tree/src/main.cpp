@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <iostream>
+#include <cstdlib>
 
 #include "tree.h"
 #include "files.h"
@@ -14,6 +15,7 @@ int play_akinator(bnode* tree)
 {
 	assert(tree);
 	
+	bn_entry* choices = nullptr;
 	bnode* node = tree;
 	
 	while (1) {
@@ -28,6 +30,17 @@ int play_akinator(bnode* tree)
 				printf("## I won!\n");
 				
 				return 0;
+			}
+			else if (choices != nullptr) {
+				node = choices->data;
+				node = choices->positive ? node->left : node->right;
+				
+				bn_entry* tmp = choices;
+				choices = choices->next;
+				
+				delete tmp;
+				
+				continue;
 			}
 			
             size_t size = 0;
@@ -55,23 +68,30 @@ int play_akinator(bnode* tree)
 			return 1;
 		}
 		else {
-			printf("## %s? [y/n]\n", node->data);
+			printf("## %s? [[y]es/[n]o/[p]robably/[u]nlikely]\n", node->data);
 			
 			while (1) {
 				char answer = 0;
 				scanf(" %c%*[^\n]s\n", &answer);
 				
-				if (answer == 'y') { 
+#define UPDATE_CHOICES(POSITIVE)							\
+{															\
+	bn_entry* tmp = new bn_entry {POSITIVE, node, choices};	\
+	choices = tmp;											\
+}
+				if (answer == 'y' || answer == 'p') { 
+					if (answer == 'p') UPDATE_CHOICES(1)
 					node = node->right;
 					break;
 				}
-				else if (answer == 'n') {
+				else if (answer == 'n' || answer == 'u') {
+					if (answer == 'u') UPDATE_CHOICES(0)
 					node = node->left;
 					break;
 				}
 				
 				printf("## Unrecognized choice\n");
-				printf("## Try again [y/n]\n");
+				printf("## Try again [[y]es/[n]o/[p]robably/[u]nlikely]\n");
 			}
 		}
 	}
@@ -189,13 +209,22 @@ int show_differences(bnode* tree)
 	bn_entry* fpath = nullptr;
 	
 	printf("## Input first object:\n");
-	if (!get_object(tree, &fname, &fpath)) return 0;
+	if (!get_object(tree, &fname, &fpath)) {
+		free(fname);
+		
+		return 0;
+	}
 	
 	char* sname = nullptr;
 	bn_entry* spath = nullptr;
 	
 	printf("## Input second object:\n");
-	if (!get_object(tree, &sname, &spath)) return 0;
+	if (!get_object(tree, &sname, &spath)) {
+		free(fname);
+		free(sname);
+		
+		return 0;
+	}
 	
 	bn_entry* tmp = nullptr;
 	
@@ -257,7 +286,7 @@ int characterise_object(bnode* tree)
 		
 		print_path(path);
 	}
-	else printf("## No object found, try [l]ist objects");
+	else printf("## No object found, try [l]ist objects\n");
 	
 	free(name);
 	
@@ -282,6 +311,12 @@ int dump(bnode* tree)
 	free(str);
 	
 	return err;
+}
+
+int open_image(bnode* tree)
+{
+	dump_as_dot(tree, "/tmp/dump.dot");
+	return system("dot -Tpng /tmp/dump.dot -o /tmp/dump.png && xdg-open /tmp/dump.png");
 }
 
 int play(bnode* tree, const char* fname)
@@ -326,6 +361,7 @@ int main(int argc, char* argv[])
 		printf("## [s]how difference between objects\n");
 		printf("## [l]ist all objects in a tree\n");
 		printf("## [d]ump tree as dot\n");
+		printf("## [o]pen tree as image\n");
 		printf("## [e]xit\n");
 		printf("####################################\n");
 		
@@ -349,6 +385,9 @@ int main(int argc, char* argv[])
 			case 'd':
 				dump(tree);
 				break;
+			case 'o':
+				open_image(tree);
+				break;
 			case 'e':
 				working = 0;
 				break;
@@ -357,6 +396,8 @@ int main(int argc, char* argv[])
 				break;
 		}
 	}
+	
+	printf("## Bye!\n");
 	
 	purge_tree(tree);
 	

@@ -17,7 +17,9 @@ struct bnode
 	bnode* right;
 };
 
-inline char* copy_str(const char* str)
+#define __attribute__(a)
+
+inline char* copy_str(const char* str) __attribute__ ((i_didnt_read_K&R))
 {
     assert(str);
     
@@ -26,6 +28,8 @@ inline char* copy_str(const char* str)
     
     return copy;
 }
+
+#undef __attribute__
 
 inline bnode* blank_tree()
 {
