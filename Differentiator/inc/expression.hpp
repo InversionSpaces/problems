@@ -4,17 +4,19 @@
 #include <string>
 #include <cstdio>
 #include <vector>
+#include <map>
 #include <cmath>
+#include <optional>
+#include <algorithm>
+#include <utility>
+#include <functional>
+
+template <typename T> 
+int sign(T val) {
+    return (T(0) < val) - (val < T(0));
+}
 
 using namespace std;
-
-const vector<string> tokens = {"(", ")"};
-	
-const vector<string> functions = { 
-	"+", "-", "*", "^", "/", "sin", 
-	"cos", "tan", "sinh", "cosh", "abs", 
-	"log", "log10", "exp"
-};
 
 enum toktype_t
 {
@@ -43,6 +45,347 @@ struct expr_t
 	expr_t* arg2;
 };
 
+void purge_expr(expr_t*);
+
+expr_t* copy_expr(const expr_t*);
+
+expr_t* derivative_expr(const expr_t*, const int);
+
+inline optional<int> get_id(const char*, const vector<string>&);
+inline const string& get_name(const int, const vector<string>&);
+
+inline expr_t* get_func(const char* str, 
+	const expr_t* arg1, const expr_t* arg2);
+
+inline expr_t* get_num(const double num);
+
+inline expr_t* func_derivative(const expr_t* ex, int id, 
+	function<expr_t*(expr_t*)> func)
+{
+	expr_t* copy = copy_expr(ex->arg1);
+	expr_t* deriv = derivative_expr(copy, id);
+	
+	return get_func("*", func(copy), deriv);
+}
+
+#define PLUS_MINUS(SIGN)				\
+double res = 0;							\
+if (ex->arg1 && ex->arg2) {				\
+	res = ex->arg1->val.num 			\
+		SIGN ex->arg2->val.num;			\
+	purge_expr(ex->arg1);				\
+	purge_expr(ex->arg2);				\
+	ex->arg1 = nullptr;					\
+	ex->arg2 = nullptr;					\
+}										\
+else {									\
+	res = SIGN ex->arg1->val.num;		\
+	purge_expr(ex->arg1);				\
+	ex->arg1 = nullptr;					\
+}										\
+ex->val.type = NUM;						\
+ex->val.num = res;						\
+return 1;	
+
+#define MUL_DIV(SIGN)					\
+double res = ex->arg1->val.num 			\
+	SIGN ex->arg2->val.num;				\
+purge_expr(ex->arg1);					\
+purge_expr(ex->arg2);					\
+ex->arg1 = nullptr;						\
+ex->arg2 = nullptr;						\
+ex->val.type = NUM;						\
+ex->val.num = res;						\
+return 1;	
+
+#define MATH_FUNC(FUNC)					\
+double res = FUNC(ex->arg1->val.num);	\
+purge_expr(ex->arg1);					\
+ex->arg1 = nullptr;						\
+ex->val.type = NUM;						\
+ex->val.num = res;						\
+return 1;
+
+#define PLUS_MINUS_DER(SIGN)										\
+expr_t* left = derivative_expr(ex->arg1, id);						\
+expr_t* right = ex->arg2 ? derivative_expr(ex->arg2, id) : nullptr;	\
+return get_func(#SIGN, left, right);
+
+
+const map<string, pair<
+	function<int(expr_t*)>, 
+	function<expr_t*(const expr_t*, int)> 
+	>
+> functions = { 
+	{"+", {	
+	[] (expr_t* ex) -> int 
+	{
+		PLUS_MINUS(+)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{ 
+		PLUS_MINUS_DER(+)
+	} 
+	} },
+	{"-", {	
+	[] (expr_t* ex) -> int 
+	{ 
+		PLUS_MINUS(-)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{
+		PLUS_MINUS_DER(-)
+	} 
+	} },
+	{"*", {	
+	[] (expr_t* ex) -> int 
+	{ 
+		MUL_DIV(*)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{ 
+		expr_t* copy1 = copy_expr(ex->arg1);
+		expr_t* copy2 = copy_expr(ex->arg2);
+		
+		expr_t* d1 = derivative_expr(ex->arg1, id);
+		expr_t* d2 = derivative_expr(ex->arg2, id);
+		
+		expr_t* left = get_func("*", d1, copy2);
+		expr_t* right = get_func("*", d2, copy1);
+		
+		return get_func("+", left, right);
+	} 
+	} },
+	{"^", {	
+	[] (expr_t* ex) -> int 
+	{ 
+		double res = pow(ex->arg1->val.num, ex->arg2->val.num);
+		
+		purge_expr(ex->arg1);
+		purge_expr(ex->arg2);
+		
+		ex->arg1 = nullptr;
+		ex->arg2 = nullptr;
+		
+		ex->val.type = NUM;
+		ex->val.num = res;
+		
+		return 1;
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{ 
+		expr_t* copy = copy_expr(ex);
+		
+		expr_t* logu = get_func("log", ex->arg1, nullptr);
+		expr_t* logu_v = get_func("*", logu, ex->arg2);
+		
+		expr_t* deriv = derivative_expr(logu_v, id);
+		
+		delete logu;
+		delete logu_v;
+		
+		return get_func("*", copy, deriv);
+	} 
+	} },
+	{"/", {	
+	[] (expr_t* ex) -> int 
+	{ 
+		MUL_DIV(/)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{ 
+		expr_t* copy1 = copy_expr(ex->arg1);
+		expr_t* copy2 = copy_expr(ex->arg2);
+		
+		expr_t* d1 = derivative_expr(ex->arg1, id);
+		expr_t* d2 = derivative_expr(ex->arg2, id);
+		
+		expr_t* left = get_func("*", d1, copy2);
+		expr_t* right = get_func("*", d2, copy1);
+		
+		expr_t* top = get_func("-", left, right);
+		
+		expr_t* bottom = get_func("^", copy_expr(ex->arg2), get_num(2));
+		
+		return get_func("/", top, bottom); 
+	} 
+	} },
+	{"sin", {	
+	[] (expr_t* ex) -> int { 
+		MATH_FUNC(sin)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{ 
+		return func_derivative(ex, id, [] (expr_t* copy) 
+		-> expr_t* {
+			return get_func("cos", copy, nullptr);
+		});
+	} 
+	} },
+	{"cos", {	
+	[] (expr_t* ex) -> int { 
+		MATH_FUNC(cos)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{ 
+		return func_derivative(ex, id, [] (expr_t* copy) 
+		->  expr_t* {
+			expr_t* sin = get_func("sin", copy, nullptr);
+			return get_func("-", sin, nullptr);
+		});
+	} 
+	} },
+	{"tan", 	{	
+	[] (expr_t* ex) -> int { 
+		MATH_FUNC(tan)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{
+		return func_derivative(ex, id, [] (expr_t* copy) 
+		->  expr_t* {
+			expr_t* cos = get_func("cos", copy, nullptr);
+			expr_t* power = get_func("^", cos, get_num(2));
+			return get_func("/", get_num(1), power);
+		});
+	} 
+	} },
+	{"sinh", {	
+	[] (expr_t* ex) -> int { 
+		MATH_FUNC(sinh)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{ 
+		return func_derivative(ex, id, [] (expr_t* copy) 
+		->  expr_t* {
+			return get_func("cosh", copy, nullptr);
+		});
+	} 
+	} },
+	{"cosh", {	
+	[] (expr_t* ex) -> int { 
+		MATH_FUNC(cosh)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{ 
+		return func_derivative(ex, id, [] (expr_t* copy) 
+		->  expr_t* {
+			return get_func("sinh", copy, nullptr);
+		});
+	} 
+	} },
+	{"abs", {	
+	[] (expr_t* ex) -> int { 
+		MATH_FUNC(abs)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{
+		return func_derivative(ex, id, [] (expr_t* copy) 
+		->  expr_t* {
+			return get_func("sign", copy, nullptr);
+		});
+	} 
+	} },
+	{"log10", {	
+	[] (expr_t* ex) -> int { 
+		MATH_FUNC(log10)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{ 
+		return func_derivative(ex, id, [] (expr_t* copy) 
+		->  expr_t* {
+			expr_t* log_10 = get_func("log", get_num(10), nullptr);
+			expr_t* mul = get_func("*", copy, log_10);
+			return get_func("/", get_num(1), mul);
+		});
+	} 
+	} },
+	{"log", {	
+	[] (expr_t* ex) -> int { 
+		MATH_FUNC(log)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{ 
+		return func_derivative(ex, id, [] (expr_t* copy) 
+		->  expr_t* {
+			return get_func("/", get_num(1), copy);
+		});
+	} 
+	} },
+	{"exp", 	{	
+	[] (expr_t* ex) -> int { 
+		MATH_FUNC(exp)
+	}, 
+	[] (const expr_t* ex, int id) -> expr_t* 
+	{
+		return func_derivative(ex, id, [] (expr_t* copy) 
+		->  expr_t* {
+			return copy;
+		});
+	} 
+	} }
+};
+
+#undef PLUS_MINUS
+#undef MUL_DIV
+#undef MATH_FUNC
+
+#undef PLUS_MINUS_DER
+
+const vector<string> tokens = {"(", ")"};
+
+const vector<string> funcs = 
+([] (const map<string, auto>& m) -> vector<string> 
+{
+	vector<string> retval(m.size());
+	
+	int i = 0;
+	for (auto it = m.begin(); it != m.end(); ++it) {
+		retval[i] = it->first;
+		++i;
+	}
+	
+	return retval;
+})
+(functions);
+
+inline expr_t* get_func(const char* str, expr_t* arg1, expr_t* arg2) {
+	token_t tok = {};
+		
+	tok.type = FUNC;
+	tok.id = *get_id(str, funcs);
+	
+	return new expr_t {tok, arg1, arg2};
+}
+
+inline expr_t* get_num(const double num)
+{
+	token_t tok = {};
+	
+	tok.type = NUM;
+	tok.num = num;
+	
+	return new expr_t {tok, nullptr, nullptr};
+}
+
+inline optional<int> get_id(const char* str, const vector<string>& vec)
+{
+	auto it = find(vec.begin(), vec.end(), str);
+	
+	if (it != vec.end())
+		return distance(vec.begin(), it);
+	
+	return nullopt;
+}
+
+inline const string& get_name(const int id, const vector<string>& vec)
+{
+	auto it = vec.begin();
+	advance(it, id);
+	
+	return *it;
+}
+
+
 void purge_expr(expr_t* ex)
 {
 	if (ex->arg1) purge_expr(ex->arg1);
@@ -62,100 +405,24 @@ inline int reduce_expr(expr_t* ex)
 	if (ex->arg1) reduced = reduce_expr(ex->arg1) && reduced;
 	if (ex->arg2) reduced = reduce_expr(ex->arg2) && reduced;
 	
-	string name = functions[ex->val.id];
-	
 	if (!reduced) return 0;
 	
-#define PLUS_MINUS(SIGN)										\
-if (name == #SIGN) {											\
-	double res = 0;												\
-	if (ex->arg1 && ex->arg2) {									\
-		res = ex->arg1->val.num SIGN ex->arg2->val.num;			\
-		purge_expr(ex->arg1);									\
-		purge_expr(ex->arg2);									\
-		ex->arg1 = nullptr;										\
-		ex->arg2 = nullptr;										\
-	}															\
-	else {														\
-		res = SIGN ex->arg1->val.num;							\
-		purge_expr(ex->arg1);									\
-		ex->arg1 = nullptr;										\
-	}															\
-	ex->val.type = NUM;											\
-	ex->val.num = res;											\
-	return 1;													\
+	string name = get_name(ex->val.id, funcs);
+	
+	return functions.at(name).first(ex);
 }
 
-	PLUS_MINUS(-)
-	PLUS_MINUS(+)
+inline void substitute_expr(expr_t* ex, const int id, const double val)
+{
+	assert(ex);
 	
-	if (name == "*") {
-		double res = ex->arg1->val.num * ex->arg2->val.num;
-			
-		purge_expr(ex->arg1);
-		purge_expr(ex->arg2);
-		
-		ex->arg1 = nullptr;
-		ex->arg2 = nullptr;
-		
+	if (ex->arg1) substitute_expr(ex->arg1, id, val);
+	if (ex->arg2) substitute_expr(ex->arg2, id, val);
+	
+	if (ex->val.type == VAR && ex->val.id == id) {
 		ex->val.type = NUM;
-		ex->val.num = res;
-		
-		return 1;
+		ex->val.num = val;
 	}
-	
-	if (name == "/") {
-		double res = ex->arg1->val.num / ex->arg2->val.num;
-			
-		purge_expr(ex->arg1);
-		purge_expr(ex->arg2);
-		
-		ex->arg1 = nullptr;
-		ex->arg2 = nullptr;
-		
-		ex->val.type = NUM;
-		ex->val.num = res;
-		
-		return 1;
-	}
-	
-	if (name == "^") {
-		double res = pow(ex->arg1->val.num, ex->arg2->val.num);
-			
-		purge_expr(ex->arg1);
-		purge_expr(ex->arg2);
-		
-		ex->arg1 = nullptr;
-		ex->arg2 = nullptr;
-		
-		ex->val.type = NUM;
-		ex->val.num = res;
-		
-		return 1;
-	}
-	
-#define MATH_FUNC(FUNC)						\
-if (name == #FUNC) {						\
-	double res = FUNC(ex->arg1->val.num);	\
-	purge_expr(ex->arg1);					\
-	ex->arg1 = nullptr;						\
-	ex->val.type = NUM;						\
-	ex->val.num = res;						\
-	return 1;								\
-}
-	
-	MATH_FUNC(sin)
-	MATH_FUNC(cos)
-	MATH_FUNC(sinh)
-	MATH_FUNC(cosh)
-	MATH_FUNC(tan)
-	MATH_FUNC(tanh)
-	MATH_FUNC(abs)
-	MATH_FUNC(exp)
-	MATH_FUNC(log)
-	MATH_FUNC(log10)
-	
-	return 0;
 }
 
 expr_t* copy_expr(const expr_t* ex)
@@ -168,6 +435,39 @@ expr_t* copy_expr(const expr_t* ex)
 	retval->arg2 = ex->arg2 ? copy_expr(ex->arg2) : nullptr;
 	
 	return retval;
+}
+
+expr_t* derivative_expr(const expr_t* ex, const int id)
+{
+	assert(ex);
+	
+	if (ex->val.type == NUM) {
+		token_t tk = {};
+		
+		tk.type = NUM;
+		tk.num = 0;
+		
+		return new expr_t {tk, nullptr, nullptr};
+	}
+	
+	if (ex->val.type == VAR) {
+		if (ex->val.id == id) {
+			token_t tk = {};
+			
+			tk.type = NUM;
+			tk.num = 1;
+			
+			return new expr_t {tk, nullptr, nullptr};
+		}
+		else {
+			// TODO
+			return new expr_t {ex->val, nullptr, nullptr};
+		}
+	}
+	
+	string name = get_name(ex->val.id, funcs);
+	
+	return functions.at(name).second(ex, id);
 }
 
 class Expression
@@ -194,11 +494,11 @@ public:
 		switch (ex->val.type) {
 			case TOKEN:
 				fprintf(fp, "NODE%p [shape=ellipse label=\"%s\"]\n", 
-					ex, tokens[ex->val.id].c_str());
+					ex, get_name(ex->val.id, tokens).c_str());
 			break;
 			case FUNC:
 				fprintf(fp, "NODE%p [shape=ellipse label=\"%s\"]\n", 
-					ex, functions[ex->val.id].c_str());
+					ex, get_name(ex->val.id, funcs).c_str());
 			break;
 			case NUM:
 				fprintf(fp, "NODE%p [shape=ellipse label=\"%lf\"]\n", 
@@ -206,17 +506,19 @@ public:
 			break;
 			case VAR:
 				fprintf(fp, "NODE%p [shape=ellipse label=\"%s\"]\n", 
-					ex, vars[ex->val.id].c_str());
+					ex, get_name(ex->val.id, vars).c_str());
 			break;
 		}
 		
 		if (ex->arg1) {
-			fprintf(fp, "NODE%p -> NODE%p\n", ex, ex->arg1);
+			fprintf(fp, "NODE%p -> NODE%p [label=\"arg1\"]\n", 
+				ex, ex->arg1);
 			dump_inner(ex->arg1, fp);
 		}
 		
 		if (ex->arg2) {
-			fprintf(fp, "NODE%p -> NODE%p\n", ex, ex->arg2);
+			fprintf(fp, "NODE%p -> NODE%p [label=\"arg2\"]\n", 
+				ex, ex->arg2);
 			dump_inner(ex->arg2, fp);
 		}
 	}
@@ -241,9 +543,23 @@ public:
 		return reduce_expr(root);
 	}
 	
-	Expression* derivative()
+	optional<Expression*> derivative(const string& var)
 	{
+		auto it = find(vars.begin(), vars.end(), var);
 		
+		if (it != vars.end()) {
+			return new Expression(derivative_expr(root, it - vars.begin()), vars);
+		}
+		else return nullopt;
+	}
+	
+	void substitute(const string& var, const double val)
+	{
+		auto it = find(vars.begin(), vars.end(), var);
+		
+		if (it != vars.end()) {
+			substitute_expr(root, it - vars.begin(), val);
+		}
 	}
 	
 	~Expression()

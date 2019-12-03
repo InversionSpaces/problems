@@ -10,9 +10,9 @@ using namespace std;
 
 int main()
 {
-	Parser p(" sin(cos(tan(x ^ x))) ");
+	Parser p("exp(x)");
 	p.add_var("x");
-	p.add_var("y");
+	//p.add_var("y");
 	
 	auto ex = p.process();
 	
@@ -22,8 +22,12 @@ int main()
 		return 0;
 	}
 	
-	(*ex)->reduce();
+	//(*ex)->substitute("x", 9.0);
+	//(*ex)->reduce();
 	(*ex)->dump("dif.dot");
+	//auto d = (*ex)->derivative("x");
+	//(*d)->dump("dif.dot");
 	
+	//delete *d;
 	delete *ex;
 }

@@ -21,34 +21,18 @@ private:
 	{
 		switch (tk.type) {
 			case TOKEN:
-				return tokens[tk.id].size();
+				return get_name(tk.id, tokens).size();
 			case FUNC:
-				return functions[tk.id].size();
+				return get_name(tk.id, funcs).size();
 			case VAR:
-				return vars[tk.id].size();
+				return get_name(tk.id, vars).size();
 			default:
 				throw invalid_argument("Can't get len of token");
 				break;
 		}
 	}
 
-	inline optional<int> get_token_id(const char* str)
-	{
-		for (int i = 0; i < tokens.size(); ++i)
-			if (str == tokens[i]) return i;
-		
-		return nullopt;
-	}
-
-	inline optional<int> get_function_id(const char* str)
-	{
-		for (int i = 0; i < functions.size(); ++i)
-			if (str == functions[i]) return i;
-		
-		return nullopt;
-	}
-
-	inline optional<int> find_in_array(vector<string> arr)
+	inline optional<int> find_in(const vector<string>& arr)
 	{
 		for (int i = 0; i < arr.size(); ++i) {
 			int len = arr[i].size();
@@ -84,7 +68,7 @@ private:
 		}
 		
 #define FIND_IN_ARRAY(arr, match)	\
-if (auto i = find_in_array(arr)) {	\
+if (auto i = find_in(arr)) {		\
 	token_t ret = {};				\
 	ret.type = match;				\
 	ret.id = *i;					\
@@ -92,7 +76,7 @@ if (auto i = find_in_array(arr)) {	\
 }
 		
 		FIND_IN_ARRAY(tokens, TOKEN)
-		FIND_IN_ARRAY(functions, FUNC)
+		FIND_IN_ARRAY(funcs, FUNC)
 		FIND_IN_ARRAY(vars, VAR)
 		
 		return nullopt;
@@ -110,7 +94,7 @@ if (auto i = find_in_array(arr)) {	\
 		}
 		
 		// Parse expr in brackets
-		if (tk->type == TOKEN && tk->id == get_token_id("(")) {
+		if (tk->type == TOKEN && tk->id == get_id("(", tokens)) {
 			auto ex = parse();
 			if (!ex) 
 				return nullopt;
@@ -119,7 +103,7 @@ if (auto i = find_in_array(arr)) {	\
 			if (!tk) 
 				return nullopt;
 				
-			if (tk->type != TOKEN || tk->id != get_token_id(")")) 
+			if (tk->type != TOKEN || tk->id != get_id(")", tokens)) 
 				return nullopt;
 			
 			return ex;
@@ -138,11 +122,11 @@ if (auto i = find_in_array(arr)) {	\
 	inline int op_priority(const token_t& op)
 	{
 		if (op.type == FUNC) {
-			if (op.id == get_function_id("+")) return 1;
-			if (op.id == get_function_id("-")) return 1;
-			if (op.id == get_function_id("*")) return 2;
-			if (op.id == get_function_id("/")) return 2;
-			if (op.id == get_function_id("^")) return 3;
+			if (op.id == get_id("+", funcs)) return 1;
+			if (op.id == get_id("-", funcs)) return 1;
+			if (op.id == get_id("*", funcs)) return 2;
+			if (op.id == get_id("/", funcs)) return 2;
+			if (op.id == get_id("^", funcs)) return 3;
 		}
 		
 		return 0; // For tokens, functions and nums
