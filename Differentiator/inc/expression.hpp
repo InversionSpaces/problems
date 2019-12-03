@@ -54,8 +54,7 @@ expr_t* derivative_expr(const expr_t*, const int);
 inline optional<int> get_id(const char*, const vector<string>&);
 inline const string& get_name(const int, const vector<string>&);
 
-inline expr_t* get_func(const char* str, 
-	const expr_t* arg1, const expr_t* arg2);
+inline expr_t* get_func(const char* str, expr_t* arg1, expr_t* arg2);
 
 inline expr_t* get_num(const double num);
 
