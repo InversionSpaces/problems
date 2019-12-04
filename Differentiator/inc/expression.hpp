@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <cmath>
+#include <cassert>
 #include <optional>
 #include <algorithm>
 #include <utility>
@@ -53,6 +54,8 @@ expr_t* derivative_expr(const expr_t*, const int);
 
 inline optional<int> get_id(const char*, const vector<string>&);
 inline const string& get_name(const int, const vector<string>&);
+
+inline int op_priority(const token_t& op);
 
 inline expr_t* get_func(const char* str, expr_t* arg1, expr_t* arg2);
 
@@ -318,7 +321,7 @@ const map<string, pair<
 	{
 		return func_derivative(ex, id, [] (expr_t* copy) 
 		->  expr_t* {
-			return copy;
+			return get_func("exp", copy, nullptr);
 		});
 	} 
 	} }
@@ -469,6 +472,19 @@ expr_t* derivative_expr(const expr_t* ex, const int id)
 	return functions.at(name).second(ex, id);
 }
 
+inline int op_priority(const token_t& op)
+{
+	if (op.type == FUNC) {
+		if (op.id == get_id("+", funcs)) return 1;
+		if (op.id == get_id("-", funcs)) return 1;
+		if (op.id == get_id("*", funcs)) return 2;
+		if (op.id == get_id("/", funcs)) return 2;
+		if (op.id == get_id("^", funcs)) return 3;
+	}
+	
+	return 0; // For tokens, functions and nums
+}
+
 class Expression
 {
 private:
@@ -488,7 +504,7 @@ public:
 	{
 	}
 	
-	inline void dump_inner(const expr_t* ex, FILE* fp)
+	inline void dump_expr_dot(const expr_t* ex, FILE* fp)
 	{
 		switch (ex->val.type) {
 			case TOKEN:
@@ -512,29 +528,130 @@ public:
 		if (ex->arg1) {
 			fprintf(fp, "NODE%p -> NODE%p [label=\"arg1\"]\n", 
 				ex, ex->arg1);
-			dump_inner(ex->arg1, fp);
+			dump_expr_dot(ex->arg1, fp);
 		}
 		
 		if (ex->arg2) {
 			fprintf(fp, "NODE%p -> NODE%p [label=\"arg2\"]\n", 
 				ex, ex->arg2);
-			dump_inner(ex->arg2, fp);
+			dump_expr_dot(ex->arg2, fp);
 		}
 	}
 	
-	int dump(const char* filename) 
+	int dump_dot(const char* filename) 
 	{
+		assert(filename);
+		
 		FILE* fp = fopen(filename, "w");
 		
 		if (!fp) return 0;
 		
 		fprintf(fp, "digraph Dif {\n");
-		dump_inner(root, fp);
+		dump_expr_dot(root, fp);
 		fprintf(fp, "}\n");
 		
 		fclose(fp);
 		
 		return 1;
+	}
+	
+	void dump_expr_latex(const expr_t* ex, int priority, FILE* fp)
+	{
+		switch (ex->val.type) {
+			case TOKEN:
+				fprintf(fp, "%s", get_name(ex->val.id, tokens).c_str());
+			break;
+			case FUNC:
+			{
+				int id = ex->val.id;
+				
+				if (ex->arg1 && ex->arg2) {
+					int tpriority = op_priority(ex->val);
+					
+					if (tpriority <= priority)
+						fprintf(fp, " \\left( ");
+					
+					if (id == get_id("+", funcs)) {
+						dump_expr_latex(ex->arg1, tpriority, fp);
+						fprintf(fp, " + ");
+						dump_expr_latex(ex->arg2, tpriority, fp);
+					}
+					else if (id == get_id("-", funcs)) {
+						dump_expr_latex(ex->arg1, tpriority, fp);
+						fprintf(fp, " - ");
+						dump_expr_latex(ex->arg2, tpriority, fp);
+					}
+					else if (id == get_id("/", funcs)) {
+						fprintf(fp, " \\dfrac{ ");
+						dump_expr_latex(ex->arg1, tpriority, fp);
+						fprintf(fp, " }{ ");
+						dump_expr_latex(ex->arg2, tpriority, fp);
+						fprintf(fp, " } ");
+					}
+					else if (id == get_id("*", funcs)) {
+						dump_expr_latex(ex->arg1, tpriority, fp);
+						fprintf(fp, " \\cdot ");
+						dump_expr_latex(ex->arg2, tpriority, fp);
+					}
+					else if (id == get_id("^", funcs)) {
+						dump_expr_latex(ex->arg1, tpriority, fp);
+						fprintf(fp, " ^{ ");
+						dump_expr_latex(ex->arg2, tpriority, fp);
+						fprintf(fp, " } ");
+					}
+					else {
+						//TODO
+					}
+					
+					if (tpriority <= priority)
+						fprintf(fp, " \\right) ");
+				}
+			
+				else if (ex->arg1) {
+					fprintf(fp, get_name(ex->val.id, funcs).c_str());
+					fprintf(fp, " \\left( ");
+					dump_expr_latex(ex->arg1, 0, fp);
+					fprintf(fp, " \\right) ");
+				}
+			}
+			break;
+			case NUM:
+				fprintf(fp, "%lf", ex->val.num);
+			break;
+			case VAR:
+				fprintf(fp, "%s", get_name(ex->val.id, vars).c_str());
+			break;
+		}
+	}
+	
+	int dump_latex(const char* filename)
+	{
+		assert(filename);
+		
+		FILE* fp = fopen(filename, "w");
+		
+		if (!fp) return 0;
+		
+		fprintf(fp, "\
+			\\documentclass[a4paper,12pt]{article}\
+			\\usepackage[utf8x]{inputenc}\
+			\\usepackage[english,russian]{babel}\
+			\\usepackage{amsmath}\
+			\\usepackage{breqn}\
+			\\usepackage{amsbsy}\
+			\\usepackage{graphicx}\
+			\\usepackage[normalem]{ulem}\
+			\\begin{document}\
+			\\begin{dmath*}\
+			$$");
+		dump_expr_latex(root, 0, fp);
+		fprintf(fp, "$$\
+			\\end{dmath*}\
+			\\end{document}");
+		
+		fclose(fp);
+		
+		return 0;
 	}
 	
 	int reduce()

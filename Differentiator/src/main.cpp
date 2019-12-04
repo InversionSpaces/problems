@@ -24,10 +24,11 @@ int main()
 	
 	//(*ex)->substitute("x", 9.0);
 	//(*ex)->reduce();
-	(*ex)->dump("dif.dot");
-	//auto d = (*ex)->derivative("x");
-	//(*d)->dump("dif.dot");
+	//(*ex)->dump_dot("ex.dot");
+	(*ex)->dump_latex("ex.latex");
+	auto d = (*ex)->derivative("x");
+	(*d)->dump_latex("dif.latex");
 	
-	//delete *d;
+	delete *d;
 	delete *ex;
 }

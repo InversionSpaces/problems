@@ -119,19 +119,6 @@ if (auto i = find_in(arr)) {		\
 		return new expr_t {*tk, *down_ex, nullptr};
 	}
 
-	inline int op_priority(const token_t& op)
-	{
-		if (op.type == FUNC) {
-			if (op.id == get_id("+", funcs)) return 1;
-			if (op.id == get_id("-", funcs)) return 1;
-			if (op.id == get_id("*", funcs)) return 2;
-			if (op.id == get_id("/", funcs)) return 2;
-			if (op.id == get_id("^", funcs)) return 3;
-		}
-		
-		return 0; // For tokens, functions and nums
-	}
-
 	inline optional<expr_t*> parse_bin_expr(int mpriority)
 	{
 		auto left = parse_expr();
