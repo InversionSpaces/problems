@@ -52,6 +52,17 @@ expr_t* copy_expr(const expr_t*);
 
 expr_t* derivative_expr(const expr_t*, const int);
 
+inline int is_num(const expr_t* ex)
+{
+	return (ex && ex->val.type == NUM);
+}
+
+inline int is_equal(const expr_t* ex, const double val) 
+{
+	return (is_num(ex) && 
+		abs(ex->val.num - val) < numeric_limits<double>::epsilon());
+}
+
 inline optional<int> get_id(const char*, const vector<string>&);
 inline const string& get_name(const int, const vector<string>&);
 
@@ -70,43 +81,25 @@ inline expr_t* func_derivative(const expr_t* ex, int id,
 	return get_func("*", func(copy), deriv);
 }
 
-#define PLUS_MINUS(SIGN)				\
-double res = 0;							\
-if (ex->arg1 && ex->arg2) {				\
-	res = ex->arg1->val.num 			\
-		SIGN ex->arg2->val.num;			\
-	purge_expr(ex->arg1);				\
-	purge_expr(ex->arg2);				\
-	ex->arg1 = nullptr;					\
-	ex->arg2 = nullptr;					\
-}										\
-else {									\
-	res = SIGN ex->arg1->val.num;		\
-	purge_expr(ex->arg1);				\
-	ex->arg1 = nullptr;					\
-}										\
-ex->val.type = NUM;						\
-ex->val.num = res;						\
-return 1;	
+#define COUNT(SIGN)													\
+if (is_num((*ex)->arg1) && is_num((*ex)->arg2)) {					\
+	(*ex)->val.type = NUM;											\
+	(*ex)->val.num = (*ex)->arg1->val.num - (*ex)->arg2->val.num;	\
+	purge_expr((*ex)->arg1);										\
+	purge_expr((*ex)->arg2);										\
+	(*ex)->arg1 = nullptr;											\
+	(*ex)->arg2 = nullptr;											\
+	return 1;														\
+}
 
-#define MUL_DIV(SIGN)					\
-double res = ex->arg1->val.num 			\
-	SIGN ex->arg2->val.num;				\
-purge_expr(ex->arg1);					\
-purge_expr(ex->arg2);					\
-ex->arg1 = nullptr;						\
-ex->arg2 = nullptr;						\
-ex->val.type = NUM;						\
-ex->val.num = res;						\
-return 1;	
-
-#define MATH_FUNC(FUNC)					\
-double res = FUNC(ex->arg1->val.num);	\
-purge_expr(ex->arg1);					\
-ex->arg1 = nullptr;						\
-ex->val.type = NUM;						\
-ex->val.num = res;						\
-return 1;
+#define MATH_FUNC(FUNC)							\
+if (is_num((*ex)->arg1)) {						\
+	double res = FUNC((*ex)->arg1->val.num);	\
+	purge_expr(*ex);							\
+	*ex = get_num(res);							\
+	return 1;									\
+}												\
+return 0;										\
 
 #define PLUS_MINUS_DER(SIGN)										\
 expr_t* left = derivative_expr(ex->arg1, id);						\
@@ -115,14 +108,40 @@ return get_func(#SIGN, left, right);
 
 
 const map<string, pair<
-	function<int(expr_t*)>, 
+	function<int(expr_t**)>, 
 	function<expr_t*(const expr_t*, int)> 
 	>
 > functions = { 
 	{"+", {	
-	[] (expr_t* ex) -> int 
+	[] (expr_t** ex) -> int 
 	{
-		PLUS_MINUS(+)
+		COUNT(+)
+		
+		if (is_equal((*ex)->arg1, 0.)) {
+			purge_expr((*ex)->arg1);
+			
+			expr_t* tmp = (*ex)->arg2;
+			
+			delete *ex;
+			
+			*ex = tmp;
+			
+			return 0;
+		}
+		
+		if (is_equal((*ex)->arg2, 0.)) {
+			purge_expr((*ex)->arg2);
+			
+			expr_t* tmp = (*ex)->arg1;
+			
+			delete *ex;
+			
+			*ex = tmp;
+			
+			return 0;
+		}
+		
+		return 0;
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
 	{ 
@@ -130,9 +149,35 @@ const map<string, pair<
 	} 
 	} },
 	{"-", {	
-	[] (expr_t* ex) -> int 
+	[] (expr_t** ex) -> int 
 	{ 
-		PLUS_MINUS(-)
+		COUNT(-)
+		
+		if (is_equal((*ex)->arg1, 0.)) {
+			purge_expr((*ex)->arg1);
+			
+			expr_t* tmp = (*ex)->arg2;
+			
+			delete *ex;
+			
+			*ex = get_func("-", tmp, nullptr);
+			
+			return 0;
+		}
+		
+		if (is_equal((*ex)->arg2, 0.)) {
+			purge_expr((*ex)->arg2);
+			
+			expr_t* tmp = (*ex)->arg1;
+			
+			delete *ex;
+			
+			*ex = tmp;
+			
+			return 0;
+		}
+		
+		return 0;
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
 	{
@@ -140,9 +185,43 @@ const map<string, pair<
 	} 
 	} },
 	{"*", {	
-	[] (expr_t* ex) -> int 
+	[] (expr_t** ex) -> int 
 	{ 
-		MUL_DIV(*)
+		COUNT(*)
+		
+		if (is_equal((*ex)->arg1, 0.) || is_equal((*ex)->arg2, 0.)) {
+			purge_expr(*ex);
+			
+			*ex = get_num(0.);
+			
+			return 1;
+		}
+		
+		if (is_equal((*ex)->arg1, 1.)) {
+			purge_expr((*ex)->arg1);
+			
+			expr_t* tmp = (*ex)->arg2;
+			
+			delete *ex;
+			
+			*ex = tmp;
+			
+			return 0;
+		}
+		
+		if (is_equal((*ex)->arg2, 1.)) {
+			purge_expr((*ex)->arg2);
+			
+			expr_t* tmp = (*ex)->arg1;
+			
+			delete *ex;
+			
+			*ex = tmp;
+			
+			return 0;
+		}
+		
+		return 0;
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
 	{ 
@@ -159,20 +238,58 @@ const map<string, pair<
 	} 
 	} },
 	{"^", {	
-	[] (expr_t* ex) -> int 
+	[] (expr_t** ex) -> int 
 	{ 
-		double res = pow(ex->arg1->val.num, ex->arg2->val.num);
+		if (is_num((*ex)->arg1) && is_num((*ex)->arg2)) {					
+			(*ex)->val.type = NUM;											
+			(*ex)->val.num = pow((*ex)->arg1->val.num, (*ex)->arg2->val.num);	
+			
+			purge_expr((*ex)->arg1);										
+			purge_expr((*ex)->arg2);	
+												
+			(*ex)->arg1 = nullptr;											
+			(*ex)->arg2 = nullptr;											
+			
+			return 1;														
+		}
 		
-		purge_expr(ex->arg1);
-		purge_expr(ex->arg2);
+		if (is_equal((*ex)->arg1, 1.)) {
+			purge_expr(*ex);
+			
+			*ex = get_num(1.);
+			
+			return 1;
+		}
 		
-		ex->arg1 = nullptr;
-		ex->arg2 = nullptr;
+		if (is_equal((*ex)->arg1, 0.)) {
+			purge_expr(*ex);
+			
+			*ex = get_num(0.);
+			
+			return 1;
+		}
 		
-		ex->val.type = NUM;
-		ex->val.num = res;
+		if (is_equal((*ex)->arg2, 1.)) {
+			purge_expr((*ex)->arg2);
+			
+			expr_t* tmp = (*ex)->arg1;
+			
+			delete *ex;
+			
+			*ex = tmp;
 		
-		return 1;
+			return 0;
+		}
+		
+		if (is_equal((*ex)->arg2, 0.)) {
+			purge_expr(*ex);
+			
+			*ex = get_num(1.);
+		
+			return 1;
+		}
+		
+		return 0;
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
 	{ 
@@ -190,9 +307,31 @@ const map<string, pair<
 	} 
 	} },
 	{"/", {	
-	[] (expr_t* ex) -> int 
+	[] (expr_t** ex) -> int 
 	{ 
-		MUL_DIV(/)
+		COUNT(/);
+		
+		if (is_equal((*ex)->arg1, 0.)) {
+			purge_expr(*ex);
+			
+			*ex = get_num(0.);
+			
+			return 1;
+		}
+		
+		if (is_equal((*ex)->arg2, 1.)) {
+			purge_expr((*ex)->arg2);
+			
+			expr_t* tmp = (*ex)->arg1;
+			
+			delete *ex;
+			
+			*ex = tmp;
+		
+			return 0;
+		}
+		
+		return 0;
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
 	{ 
@@ -213,7 +352,7 @@ const map<string, pair<
 	} 
 	} },
 	{"sin", {	
-	[] (expr_t* ex) -> int { 
+	[] (expr_t** ex) -> int { 
 		MATH_FUNC(sin)
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
@@ -225,7 +364,7 @@ const map<string, pair<
 	} 
 	} },
 	{"cos", {	
-	[] (expr_t* ex) -> int { 
+	[] (expr_t** ex) -> int { 
 		MATH_FUNC(cos)
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
@@ -238,7 +377,7 @@ const map<string, pair<
 	} 
 	} },
 	{"tan", 	{	
-	[] (expr_t* ex) -> int { 
+	[] (expr_t** ex) -> int { 
 		MATH_FUNC(tan)
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
@@ -252,7 +391,7 @@ const map<string, pair<
 	} 
 	} },
 	{"sinh", {	
-	[] (expr_t* ex) -> int { 
+	[] (expr_t** ex) -> int { 
 		MATH_FUNC(sinh)
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
@@ -264,7 +403,7 @@ const map<string, pair<
 	} 
 	} },
 	{"cosh", {	
-	[] (expr_t* ex) -> int { 
+	[] (expr_t** ex) -> int { 
 		MATH_FUNC(cosh)
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
@@ -276,7 +415,7 @@ const map<string, pair<
 	} 
 	} },
 	{"abs", {	
-	[] (expr_t* ex) -> int { 
+	[] (expr_t** ex) -> int { 
 		MATH_FUNC(abs)
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
@@ -288,7 +427,7 @@ const map<string, pair<
 	} 
 	} },
 	{"log10", {	
-	[] (expr_t* ex) -> int { 
+	[] (expr_t** ex) -> int { 
 		MATH_FUNC(log10)
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
@@ -302,7 +441,7 @@ const map<string, pair<
 	} 
 	} },
 	{"log", {	
-	[] (expr_t* ex) -> int { 
+	[] (expr_t** ex) -> int { 
 		MATH_FUNC(log)
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
@@ -314,7 +453,7 @@ const map<string, pair<
 	} 
 	} },
 	{"exp", 	{	
-	[] (expr_t* ex) -> int { 
+	[] (expr_t** ex) -> int { 
 		MATH_FUNC(exp)
 	}, 
 	[] (const expr_t* ex, int id) -> expr_t* 
@@ -396,20 +535,17 @@ void purge_expr(expr_t* ex)
 	delete ex;
 }
 
-inline int reduce_expr(expr_t* ex)
+inline int reduce_expr(expr_t** ex)
 {
 	assert(ex);
 	
-	if (ex->val.type == NUM) return 1;
-	if (ex->val.type == VAR) return 0;
+	if ((*ex)->val.type == NUM) return 1;
+	if ((*ex)->val.type == VAR) return 0;
 	
-	int reduced = 1;
-	if (ex->arg1) reduced = reduce_expr(ex->arg1) && reduced;
-	if (ex->arg2) reduced = reduce_expr(ex->arg2) && reduced;
+	if ((*ex)->arg1) reduce_expr(&((*ex)->arg1));
+	if ((*ex)->arg2) reduce_expr(&((*ex)->arg2));
 	
-	if (!reduced) return 0;
-	
-	string name = get_name(ex->val.id, funcs);
+	string name = get_name((*ex)->val.id, funcs);
 	
 	return functions.at(name).first(ex);
 }
@@ -444,22 +580,12 @@ expr_t* derivative_expr(const expr_t* ex, const int id)
 	assert(ex);
 	
 	if (ex->val.type == NUM) {
-		token_t tk = {};
-		
-		tk.type = NUM;
-		tk.num = 0;
-		
-		return new expr_t {tk, nullptr, nullptr};
+		return get_num(0);
 	}
 	
 	if (ex->val.type == VAR) {
 		if (ex->val.id == id) {
-			token_t tk = {};
-			
-			tk.type = NUM;
-			tk.num = 1;
-			
-			return new expr_t {tk, nullptr, nullptr};
+			return get_num(1);
 		}
 		else {
 			// TODO
@@ -483,6 +609,12 @@ inline int op_priority(const token_t& op)
 	}
 	
 	return 0; // For tokens, functions and nums
+}
+
+inline int roundable(const double num) {
+	if (abs(num - roundl(num)) < numeric_limits<double>::epsilon())
+		return 1;
+	return 0;
 }
 
 class Expression
@@ -516,8 +648,12 @@ public:
 					ex, get_name(ex->val.id, funcs).c_str());
 			break;
 			case NUM:
-				fprintf(fp, "NODE%p [shape=ellipse label=\"%lf\"]\n", 
-					ex, ex->val.num);
+				if (roundable(ex->val.num)) 
+					fprintf(fp, "NODE%p [shape=ellipse label=\"%ld\"]\n", 
+						ex, lround(ex->val.num));
+				else 
+					fprintf(fp, "NODE%p [shape=ellipse label=\"%g\"]\n", 
+						ex, ex->val.num);
 			break;
 			case VAR:
 				fprintf(fp, "NODE%p [shape=ellipse label=\"%s\"]\n", 
@@ -538,21 +674,15 @@ public:
 		}
 	}
 	
-	int dump_dot(const char* filename) 
+	int dump_dot(FILE* fp)
 	{
-		assert(filename);
-		
-		FILE* fp = fopen(filename, "w");
-		
-		if (!fp) return 0;
+		assert(fp);
 		
 		fprintf(fp, "digraph Dif {\n");
 		dump_expr_dot(root, fp);
 		fprintf(fp, "}\n");
 		
-		fclose(fp);
-		
-		return 1;
+		return 0;
 	}
 	
 	void dump_expr_latex(const expr_t* ex, int priority, FILE* fp)
@@ -608,7 +738,7 @@ public:
 				}
 			
 				else if (ex->arg1) {
-					fprintf(fp, get_name(ex->val.id, funcs).c_str());
+					fputs(get_name(ex->val.id, funcs).c_str(), fp);
 					fprintf(fp, " \\left( ");
 					dump_expr_latex(ex->arg1, 0, fp);
 					fprintf(fp, " \\right) ");
@@ -616,7 +746,10 @@ public:
 			}
 			break;
 			case NUM:
-				fprintf(fp, "%lf", ex->val.num);
+				if (roundable(ex->val.num))
+					fprintf(fp, "%ld", lround(ex->val.num));
+				else
+					fprintf(fp, "%lf", ex->val.num);
 			break;
 			case VAR:
 				fprintf(fp, "%s", get_name(ex->val.id, vars).c_str());
@@ -624,13 +757,9 @@ public:
 		}
 	}
 	
-	int dump_latex(const char* filename)
+	int dump_latex(FILE* fp)
 	{
-		assert(filename);
-		
-		FILE* fp = fopen(filename, "w");
-		
-		if (!fp) return 0;
+		assert(fp);
 		
 		fprintf(fp, "\
 			\\documentclass[a4paper,12pt]{article}\
@@ -649,14 +778,64 @@ public:
 			\\end{dmath*}\
 			\\end{document}");
 		
-		fclose(fp);
+		return 0;
+	}
+	
+	int dump_expr(const expr_t* ex, int priority, FILE* fp)
+	{
+		switch (ex->val.type) {
+			case TOKEN:
+				fprintf(fp, "%s", get_name(ex->val.id, tokens).c_str());
+			break;
+			case FUNC:
+			{
+				int id = ex->val.id;
+				
+				if (ex->arg1 && ex->arg2) {
+					int tpriority = op_priority(ex->val);
+					
+					if (tpriority <= priority)
+						fprintf(fp, "(");
+					
+					dump_expr(ex->arg1, tpriority, fp);
+					fputs(get_name(ex->val.id, funcs).c_str(), fp);
+					dump_expr(ex->arg2, tpriority, fp);
+					
+					if (tpriority <= priority)
+						fprintf(fp, ")");
+				}
+				else if (ex->arg1) {
+					fputs(get_name(ex->val.id, funcs).c_str(), fp);
+					fprintf(fp, "(");
+					dump_expr(ex->arg1, 0, fp);
+					fprintf(fp, ")");
+				}
+			}
+			break;
+			case NUM:
+				if (roundable(ex->val.num))
+					fprintf(fp, "%ld", lround(ex->val.num));
+				else
+					fprintf(fp, "%lf", ex->val.num);
+			break;
+			case VAR:
+				fprintf(fp, "%s", get_name(ex->val.id, vars).c_str());
+			break;
+		}
 		
 		return 0;
 	}
 	
+	int dump(FILE* fp) 
+	{
+		assert(fp);
+		
+		return dump_expr(root, 0, fp);
+	}
+	
 	int reduce()
 	{
-		return reduce_expr(root);
+		return reduce_expr(&root);
 	}
 	
 	optional<Expression*> derivative(const string& var)
