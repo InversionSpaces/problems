@@ -81,15 +81,15 @@ inline expr_t* func_derivative(const expr_t* ex, int id,
 	return get_func("*", func(copy), deriv);
 }
 
-#define COUNT(SIGN)													\
-if (is_num((*ex)->arg1) && is_num((*ex)->arg2)) {					\
-	(*ex)->val.type = NUM;											\
-	(*ex)->val.num = (*ex)->arg1->val.num - (*ex)->arg2->val.num;	\
-	purge_expr((*ex)->arg1);										\
-	purge_expr((*ex)->arg2);										\
-	(*ex)->arg1 = nullptr;											\
-	(*ex)->arg2 = nullptr;											\
-	return 1;														\
+#define COUNT(SIGN)														\
+if (is_num((*ex)->arg1) && is_num((*ex)->arg2)) {						\
+	(*ex)->val.type = NUM;												\
+	(*ex)->val.num = (*ex)->arg1->val.num SIGN (*ex)->arg2->val.num;	\
+	purge_expr((*ex)->arg1);											\
+	purge_expr((*ex)->arg2);											\
+	(*ex)->arg1 = nullptr;												\
+	(*ex)->arg2 = nullptr;												\
+	return 1;															\
 }
 
 #define MATH_FUNC(FUNC)							\
@@ -838,14 +838,13 @@ public:
 		return reduce_expr(&root);
 	}
 	
-	optional<Expression*> derivative(const string& var)
+	Expression* derivative(const string& var)
 	{
 		auto it = find(vars.begin(), vars.end(), var);
-		
-		if (it != vars.end()) {
-			return new Expression(derivative_expr(root, it - vars.begin()), vars);
-		}
-		else return nullopt;
+		return new Expression(
+			derivative_expr(root, it - vars.begin()), 
+			vars
+		);
 	}
 	
 	void substitute(const string& var, const double val)

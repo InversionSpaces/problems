@@ -6,6 +6,6 @@ INC = inc
 all:
 	$(CC) $(FLAGS) $(SRC) -I$(INC) -o dif
 	./dif
-	dot -Tpng dif.dot -o dif.png
-	xdg-open dif.png
+#	dot -Tpng dif.dot -o dif.png
+#	xdg-open dif.png
 	

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <iostream>
 #include <optional>
 #include <vector>
 #include <string>
+#include <cstring>
 #include <exception>
 
 #include "expression.hpp"
@@ -175,9 +175,14 @@ public:
 		return new Expression(*ex, move(vars));
 	}
 	
-	void reset(const char* str)
+	void reset_input(const char* str)
 	{
 		input = str;
+	}
+	
+	void reset_vars()
+	{
+		vars.clear();
 	}
 
 	void add_var(const char* str)
