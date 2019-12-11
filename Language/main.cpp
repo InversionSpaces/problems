@@ -12,6 +12,7 @@
 using namespace std;
 
 void push_expr(const Node* tree, const vector<string>& vars, ofstream& out);
+void generate_block_asm(const Node* tree, const vector<string>& vars, ofstream& out);
 
 string get_substr(const Node* tree)
 {
@@ -87,15 +88,30 @@ inline void pop_to_idlist(const Node* tree,
 {
 	assert(tree->data == "IDLIST");
 	
-	for (int i = 0; i < tree->childs.size(); i += 2) {
-		assert(	(i == tree->childs.size() - 1) ||
-				(tree->childs[i + 1]->data == ","));
+	for (int i = tree->childs.size() - 1; i >= 0; i -= 2) {
+		assert(	(i == 0) ||
+				(tree->childs[i - 1]->data == ","));
 		
 		pop_to_local(get_offset(tree->childs[i], vars), out);
 	}
 }
 
-inline void push_num(Node* tree, ofstream& out)
+inline void push_boolexpr(const Node* tree,
+	const vector<string>& vars,	ofstream& out)
+{
+	assert(tree->data == "BOOLEXPR");
+	assert(tree->childs.size() == 3);
+	assert(	tree->childs[1]->data == "==" ||
+			tree->childs[1]->data == ">=" ||
+			tree->childs[1]->data == ">");
+			
+	push_expr(tree->childs.back(), vars, out);
+	push_expr(tree->childs.front(), vars, out);
+	
+	out << "SUB\n";
+}
+
+inline void push_num(const Node* tree, ofstream& out)
 {
 	assert(tree->data == "NUM");
 	
@@ -195,7 +211,7 @@ inline void push_expr(const Node* tree,
 	}
 }
 
-inline void push_expr_list(const Node* tree,
+inline void push_exprlist(const Node* tree,
 	const vector<string>& vars,	ofstream& out)
 {
 	assert(tree->data == "EXPRLIST");
@@ -211,6 +227,47 @@ inline void generate_call_asm(const Node* tree,
 	const vector<string>& vars,	ofstream& out)
 {
 	assert(tree->data == "CALL");
+	assert(tree->childs.size() >= 4);
+	
+	bool has_ids = false;
+	int skip = 0;
+	if (tree->childs.front()->data == "IDLIST") {
+		assert(tree->childs[1]->data == "=");
+		
+		skip = 2;
+		has_ids = true;
+	}
+	
+	string id = get_id(tree->childs[skip]);
+	
+	assert(tree->childs[1 + skip]->data == "(");
+	
+	if (tree->childs[2 + skip]->data == "EXPRLIST") {
+		push_exprlist(tree->childs[2 + skip], vars, out);
+		skip += 1;
+	}
+	
+	assert(tree->childs[2 + skip]->data == ")");
+	assert(tree->childs[3 + skip]->data == ";");
+	
+	out << "; CALL preporation\n";
+	out << "PUSH REGISTER 0\n";
+	out << "PUSH CONSTANT " << vars.size() << "\n";
+	out << "ADD\n";
+	out << "POP REGISTER 0\n";
+	out << "; -----------------\n";
+	
+	out << "CALL " << id << "\n";
+	
+	out << "; CALL restoration\n";
+	out << "PUSH CONSTANT " << vars.size() << "\n";
+	out << "PUSH REGISTER 0\n";
+	out << "SUB\n";
+	out << "POP REGISTER 0\n";
+	out << "; -----------------\n";
+	
+	if (has_ids)
+		pop_to_idlist(tree->childs.front(), vars, out);
 }
 
 inline void generate_statement_asm(const Node* tree, 
@@ -221,7 +278,7 @@ inline void generate_statement_asm(const Node* tree,
 	assert(tree->childs[1]->data == "=");
 	assert(tree->childs[3]->data == ";");
 	
-	push_expr_list(tree->childs[2], vars, out);
+	push_exprlist(tree->childs[2], vars, out);
 	pop_to_idlist(tree->childs[0], vars, out);
 }
 
@@ -229,12 +286,60 @@ inline void generate_return_asm(const Node* tree,
 	const vector<string>& vars,	ofstream& out)
 {
 	assert(tree->data == "RETSTATEMENT");
+	assert(tree->childs.front()->data == "return");
+	assert(tree->childs.back()->data == ";");
+	
+	out << "; RETSTATEMENT\n";
+	if (tree->childs.size() == 3)
+		push_exprlist(tree->childs[1], vars, out);
+		
+	out << "RETURN\n";
 }
 
 inline void generate_if_asm(const Node* tree, 
 	const vector<string>& vars,	ofstream& out)
 {
 	assert(tree->data == "IFSTATEMENT");
+	assert(tree->childs.size() >= 5);
+
+	static int counter = 0;
+	
+	assert(tree->childs[0]->data == "if");
+	assert(tree->childs[1]->data == "(");
+	assert(tree->childs[3]->data == ")");
+	
+	out << "; BOOLEXPR\n";
+	
+	push_boolexpr(tree->childs[2], vars, out);
+	
+	out << ";-------------\n";
+	
+	if (tree->childs[2]->childs[1]->data == "==") {
+		out << "JUMP EQ IF" << counter << "\n";
+	}
+	else if (tree->childs[2]->childs[1]->data == ">=") {
+		out << "JUMP GEQ IF" << counter << "\n";
+	}
+	else if (tree->childs[2]->childs[1]->data == ">") {
+		out << "JUMP GT IF" << counter << "\n";
+	}
+	else assert(0);
+	
+	if (tree->childs.size() > 5) {
+		assert(tree->childs.size() == 7);
+		assert(tree->childs[5]->data == "else");
+		
+		generate_block_asm(tree->childs[6], vars, out);
+	}
+	
+	int local = counter++;
+	
+	out << "JUMP UN ENDIF" << local << "\n";
+	out << "LABEL IF" << local << "\n";
+	
+	generate_block_asm(tree->childs[4], vars, out);
+	
+	out << "LABEL ENDIF" << local << "\n";
 }
 
 inline void generate_block_asm(const Node* tree, 
@@ -306,10 +411,12 @@ inline void generate_func_asm(const Node* tree, ofstream& out)
 	
 	assert(tree->childs[4 + skip]->data == "BLOCK");
 	
-	out << "LABEL " << id << ":\n";
-	for (int i = 0; i < args.size(); ++i) {
+	out << "LABEL " << id << "\n";
+	for (int i = args.size() - 1; i >= 0; --i) {
 		out << "; arg - " << args[i] << "\n";
+		
 		pop_to_local(i, out);
+		
 		out << "; ---------\n";
 	}
 	
@@ -317,14 +424,41 @@ inline void generate_func_asm(const Node* tree, ofstream& out)
 	
 	generate_block_asm(tree->childs[4 + skip], vars, out);
 	
+	out << "; End of function return\n";
 	out << "RETURN\n";
+}
+
+inline void get_basic_funcs_asm(ofstream& out)
+{
+	out << "LABEL output\n";
+	out << "POP OUT 1\n";
+	out << "RETURN\n\n";
+	
+	out << "LABEL input\n";
+	out << "PUSH IN 1\n";
+	out << "RETURN\n\n";
+	
+	out << "LABEL sqrt\n";
+	out << "SQRT\n";
+	out << "RETURN\n\n";
 }
 
 inline void generate_asm(const Node* tree, ofstream& out) 
 {
+	out << "PUSH CONSTANT 0\n";
+	out << "POP REGISTER 0\n\n";
+	
+	out << "CALL main\n";
+	out << "JUMP UN END\n\n";
+	
+	get_basic_funcs_asm(out);
 	for (auto& func: tree->childs) {
+		out << "\n";
 		generate_func_asm(func, out);
+		out << "\n";
 	}
+	
+	out << "\nLABEL END\n";
 }
 
 int main() {
@@ -342,7 +476,7 @@ int main() {
 		dump_tree(*tree, out_dot);
 		out_dot.close();
 		
-		ofstream out_asm("prog.asm");
+		ofstream out_asm("prog.vm");
 		generate_asm(*tree, out_asm);
 		out_asm.close();
 		
