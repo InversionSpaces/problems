@@ -348,26 +348,26 @@ inline void generate_block_asm(const Node* tree,
 	assert(tree->childs.front()->data == "{");
 	assert(tree->childs.back()->data == "}");
 	
-	cout << "BLOCK\n";
+	//cout << "BLOCK\n";
 	
 	for (int i = 1; i < tree->childs.size() - 1; ++i) {
 		if (tree->childs[i]->data == "CALL") {
-			cout << "CALL\n";
+			//cout << "CALL\n";
 			
 			generate_call_asm(tree->childs[i], vars, out);
 		}
 		else if (tree->childs[i]->data == "STATEMENT") {
-			cout << "STATEMENT\n";
+			//cout << "STATEMENT\n";
 			
 			generate_statement_asm(tree->childs[i], vars, out);
 		}
 		else if (tree->childs[i]->data == "IFSTATEMENT") {
-			cout << "IFSTATEMENT\n";
+			//cout << "IFSTATEMENT\n";
 			
 			generate_if_asm(tree->childs[i], vars, out);
 		}
 		else if (tree->childs[i]->data == "RETSTATEMENT") {
-			cout << "RETSTATEMENT\n";
+			//cout << "RETSTATEMENT\n";
 			
 			generate_return_asm(tree->childs[i], vars, out);
 		}
@@ -384,7 +384,7 @@ inline void generate_func_asm(const Node* tree, ofstream& out)
 	
 	string id = get_id(tree->childs[1]);
 	
-	cout << "FUNCTION " + id + "\n";
+	//cout << "FUNCTION " + id + "\n";
 	
 	assert(tree->childs[2]->data == "(");
 	
@@ -461,8 +461,20 @@ inline void generate_asm(const Node* tree, ofstream& out)
 	out << "\nLABEL END\n";
 }
 
-int main() {
-	ifstream in("prog.cn");
+int print_usage(const char* name)
+{
+	cout << "Usage: " << name << " CN_FILE VM_FILE\n";
+	cout << "Compiles code in CN_FILE to VM_FILE\n";
+	
+	return 0;
+}
+
+int main(int argc, char* argv[]) {
+	if (argc != 3) 
+		return print_usage(argv[0]);
+	
+	// "Compilation Nonsense"
+	ifstream in(argv[1]);
 	
 	string tmp, data;
 	while (getline(in, tmp)) data += tmp;
@@ -472,17 +484,17 @@ int main() {
 	Parser parser(data.c_str());
 	auto tree = parser.parsePROGRAM();
 	if (tree) {
-		ofstream out_dot("tree.dot");
+		ofstream out_dot(argv[1] + string(".dot"));
 		dump_tree(*tree, out_dot);
 		out_dot.close();
 		
-		ofstream out_asm("prog.vm");
+		ofstream out_asm(argv[2]);
 		generate_asm(*tree, out_asm);
 		out_asm.close();
 		
 		purge_tree(*tree);
 	}
 	else {
-		cout << "Oh shit oh fuck" << endl;
+		cout << "Parsing error\n";
 	}
 }
