@@ -38,7 +38,7 @@ int set_command(const char* cmd)
 	char vname[cmd_len + 1] = {};
 	int num = 0;
 	
-	sscanf(cmd, "%i derivative of %n", &num, &skip);
+	sscanf(cmd, "derivative %i order of %n", &num, &skip);
 	if (skip) {
 		if (num < 1) {
 			printf("## Derivative must be of 1 or bigger order\n");
@@ -97,7 +97,7 @@ int set_command(const char* cmd)
 		return 1;
 	}
 	
-	sscanf(cmd, "%i parameters expression: %n", &num, &skip);
+	sscanf(cmd, "expression with %i parameters: %n", &num, &skip);
 	if (skip) {
 		cmd += skip;
 		parser.reset_vars();

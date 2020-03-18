@@ -215,25 +215,21 @@ BinaryFile* BinaryFileFromVMFile(const char* fname)
 								);
     
     if (error) {
-		printf("## Error while processing file...\n");
-		
 		free(container->file);
 		CContainerDeInit(container);
 		free(data);
 		
-		return 0;
+		return NULL;
 	}
 	
 	error = CContainerPushLabels(container);
 	
 	if (error) {
-		printf("## Error while pushing labels...\n");
-		
 		free(container->file);
 		CContainerDeInit(container);
 		free(data);
 		
-		return 0;
+		return NULL;
 	}
     
     CContainerShrink(container);

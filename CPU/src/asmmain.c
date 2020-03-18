@@ -20,6 +20,12 @@ int main(int argc, char* argv[])
 	
 	BinaryFile* file = BinaryFileFromVMFile(argv[1]);
 	
+	if (!file) {
+		printf("## Error converting vm file...\n");
+		
+		return 1;
+	}
+	
 	int error = BinaryFileToFile(file, argv[2]);
 	
 	if (error) {

@@ -1102,6 +1102,7 @@ void sort_file_lines(const char *infile, const char *outfile, char reverse)
 
 	printf("# Done\n# Processing...\n");
 
+	// FIXME BUG HERE DOESNT COUNT END LINE
 	size_t linenum;
 	MEASURE(linenum = replace(file, '\n', '\0'))
 
@@ -1636,7 +1637,7 @@ void q_sort(void *arr, size_t n, size_t size,
 
 	void *ls = NULL;
 	void *rs = NULL;
-	void *p = NULL;
+	void *p  = NULL;
 
 	stack_push(st, &r);
 	stack_push(st, &l);

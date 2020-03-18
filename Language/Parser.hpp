@@ -77,16 +77,58 @@ public:
     optional<Node *> tmp = nullopt;
     optional<char> ctmp = nullopt;
 
-    // ALTS [[Wildcard(op='*', alts=[[Token(type=1, str='FUNCTION')]])]]
+    // ALTS [[Wildcard(op='+', alts=[[Token(type=1, str='FUNCTION')]])]]
     push(nullopt);
 
-    // ALT [Wildcard(op='*', alts=[[Token(type=1, str='FUNCTION')]])]
+    // ALT [Wildcard(op='+', alts=[[Token(type=1, str='FUNCTION')]])]
     while (!top()) {
       mark();
 
       top() = new Node{};
 
-      // WILDCARD * : [[Token(type=1, str='FUNCTION')]]
+      // WILDCARD + : [[Token(type=1, str='FUNCTION')]]
+
+      // ALTS [[Token(type=1, str='FUNCTION')]]
+      push(nullopt);
+
+      // ALT [Token(type=1, str='FUNCTION')]
+      while (!top()) {
+        mark();
+
+        top() = new Node{};
+
+        tmp = parseFUNCTION();
+
+        if (!tmp) {
+          purge_tree(*top());
+          top() = nullopt;
+
+          reset();
+          break;
+        }
+
+        (*top())->childs.push_back(*tmp);
+
+        unmark();
+      }
+      // END ALT [Token(type=1, str='FUNCTION')]
+
+      // END ALTS [[Token(type=1, str='FUNCTION')]]
+      assert(results.size() == init_size + 2);
+
+      tmp = pop();
+
+      if (!tmp) {
+        purge_tree(*top());
+        top() = nullopt;
+
+        reset();
+        break;
+      }
+
+      (*top())->childs.insert((*top())->childs.end(), (*tmp)->childs.begin(),
+                              (*tmp)->childs.end());
+      delete *tmp;
 
       while (1) {
 
@@ -129,13 +171,13 @@ public:
           break;
       }
 
-      // END WILDCARD * : [[Token(type=1, str='FUNCTION')]]
+      // END WILDCARD + : [[Token(type=1, str='FUNCTION')]]
 
       unmark();
     }
-    // END ALT [Wildcard(op='*', alts=[[Token(type=1, str='FUNCTION')]])]
+    // END ALT [Wildcard(op='+', alts=[[Token(type=1, str='FUNCTION')]])]
 
-    // END ALTS [[Wildcard(op='*', alts=[[Token(type=1, str='FUNCTION')]])]]
+    // END ALTS [[Wildcard(op='+', alts=[[Token(type=1, str='FUNCTION')]])]]
     assert(results.size() == init_size + 1);
 
     tmp = pop();

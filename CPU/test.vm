@@ -1,0 +1,29 @@
+PUSH CONSTANT 0
+POP REGISTER 5
+
+CALL FUNC
+
+LABEL FUNC
+	PUSH CONSTANT 8 ; Local var index
+	PUSH REGISTER 5
+	ADD
+
+	PUSH LOCAL INDEX
+
+	; Function body
+
+	; CALL preparation
+
+	PUSH REGISTER 5
+	PUSH CONSTANT 10 ; LOCAL vars size of our function
+	ADD	; Prepare shift fro next call
+
+	POP REGISTER 5 ; Update local base for next function
+
+	CALL FUNC_ANOTHER
+
+RETURN
+
+
+
+

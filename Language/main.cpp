@@ -476,12 +476,17 @@ int main(int argc, char* argv[]) {
 	// "Compilation Nonsense"
 	ifstream in(argv[1]);
 	
-	string tmp, data;
-	while (getline(in, tmp)) data += tmp;
+	in.seekg(0, ios::end);
+	size_t size = in.tellg();
+	in.seekg(0);
+	
+	string data(size, ' ');
+	in.read(data.data(), size);
 	
 	in.close();
 	
 	Parser parser(data.c_str());
+	
 	auto tree = parser.parsePROGRAM();
 	if (tree) {
 		ofstream out_dot(argv[1] + string(".dot"));
