@@ -4,7 +4,7 @@
 #include <cinttypes>
 #include <algorithm>
 
-template<typename T, uint64_t arrsize = 1307>
+template<typename T, typename comp_t=std::equal_to<T>, uint64_t arrsize = 1307>
 class HashMap {
 	using hashfunc_t = std::function<uint64_t(const T&)>;
 	using list_t = std::forward_list<T>;
@@ -12,32 +12,45 @@ class HashMap {
 
 private:
 	array_t arr;
-	hashfunc_t hash;
+	const hashfunc_t hash;
+	const comp_t comp;
 public:
-	HashMap(hashfunc_t hashfunc) : hash(hashfunc) {}
+	HashMap(hashfunc_t hashfunc) : hash(hashfunc), comp() {}
 
 	void insert(const T& val) noexcept {
 		const uint64_t id = hash(val) % arrsize;
 		list_t& list = arr[id];
 
-		auto it = std::find(list.begin(), list.end(), val);
-		if (it == list.end())
-			list.push_front(val);
+		for (auto it = list.begin(); it != list.end(); ++it)
+			if (comp(*it, val))
+				return;
+
+		list.push_front(val);
 	}
 
 	void erase(const T& val) noexcept {
 		const uint64_t id = hash(val) % arrsize;
 		list_t& list = arr[id];
 
-		list.remove(val);
+		auto prev = list.before_begin();
+		for (auto it = list.begin(); it != list.end(); ++it) {
+			if (comp(*it, val)) {
+				list.erase_after(prev);
+				return;
+			}
+			++prev;
+		}
 	}
 
 	bool contains(const T& val) const noexcept {
 		const uint64_t id = hash(val) % arrsize;
 		const list_t& list = arr[id];
 		
-		auto it = std::find(list.begin(), list.end(), val);
-		return it != list.end();
+		for (auto it = list.begin(); it != list.end(); ++it)
+			if (comp(*it, val))
+				return true;
+
+		return false;
 	}
 
 	uint64_t get_arrsize() const noexcept {
