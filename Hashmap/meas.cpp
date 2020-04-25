@@ -22,13 +22,10 @@ uint64_t xor_hash(const string& str) {
 	return hash;
 }
 
+extern "C" uint64_t __xor_hash(const char* str, size_t len);
+
 uint64_t xor_hash_asm(const string& str) {
-	uint64_t hash = 0;
-	const uint64_t* it = reinterpret_cast<const uint64_t*>(str.data());
-	size_t size = str.size();
-	hash ^= *it;
-	it++;
-	return hash;
+	return __xor_hash(str.data(), str.size());
 }
 
 vector<string> load_lines(const char* filename) {
@@ -78,6 +75,9 @@ struct streq {
 };
 
 int main() {
+	cout << xor_hash_asm("simplestring") << endl;
+	cout << xor_hash("simplestring") << endl;
+	/*
 	auto lines = load_lines("strings");
 	randdist dist(0, lines.size() - 1);
 
@@ -87,4 +87,5 @@ int main() {
 		hmap.contains(lines[dist.next()]);
 		hmap.erase(lines[dist.next()]);
 	}
+	*/
 }

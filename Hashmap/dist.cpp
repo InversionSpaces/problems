@@ -125,8 +125,6 @@ void test_hash(vector<string>& lines, const char* name, hashfunc_t func) {
 }
 
 int main() {
-	//cout << measure<>::exec(load_lines, "strings");
-
 	auto lines = load_lines("strings");
 	const vector<pair<const char*, hashfunc_t>> hashes = {
 		{"len", len_hash},
